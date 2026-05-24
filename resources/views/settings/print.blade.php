@@ -57,6 +57,114 @@ function toggleCompanyInfo(header) {
     body.classList.toggle('open', !isOpen);
     icon.classList.toggle('open', !isOpen);
 }
+
+// ── Generic section toggle ──
+function toggleSection(bodyId, header) {
+    var body = document.getElementById(bodyId);
+    var icon = header.querySelector('.ps-company-toggle-icon');
+    var isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    icon.classList.toggle('open', !isOpen);
+}
+
+// ── Recipient Address ──
+var _customerOptions = @json($customers->map(fn($c) => ['id'=>$c->id,'name'=>$c->name,'email'=>$c->email??'']));
+var _vendorOptions   = @json($vendors->map(fn($v) => ['id'=>$v->id,'name'=>$v->name,'email'=>$v->email??'']));
+
+function clearRecipientForm() {
+    document.getElementById('recipientSelect').innerHTML = '<option value="">— {{ __("Choose one") }} —</option>';
+    var type = document.getElementById('recipientType').value;
+    var list = type === 'customer' ? _customerOptions : _vendorOptions;
+    list.forEach(function(item) {
+        var opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = item.name + (item.email ? ' (' + item.email + ')' : '');
+        document.getElementById('recipientSelect').appendChild(opt);
+    });
+    document.getElementById('recipientForm').style.display = 'none';
+}
+
+function loadRecipient(id) {
+    if (!id) { document.getElementById('recipientForm').style.display = 'none'; return; }
+    var type = document.getElementById('recipientType').value;
+    fetch('{{ route("print.recipient.data") }}?type=' + type + '&id=' + id, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(function(data) {
+        if (data.error) { alert(data.error); return; }
+        var fields = ['billing_name','billing_phone','billing_address','billing_city','billing_state','billing_zip','billing_country',
+                      'shipping_name','shipping_phone','shipping_address','shipping_city','shipping_state','shipping_zip','shipping_country'];
+        fields.forEach(function(f) {
+            var el = document.getElementById(f);
+            if (el) el.value = data[f] || '';
+        });
+        document.getElementById('recipientForm').style.display = 'block';
+        document.getElementById('recipientMsg').style.display = 'none';
+    })
+    .catch(function() { alert('{{ __("Failed to load data.") }}'); });
+}
+
+function copyBillingToShipping() {
+    var map = {
+        'billing_name':'shipping_name', 'billing_phone':'shipping_phone',
+        'billing_address':'shipping_address', 'billing_city':'shipping_city',
+        'billing_state':'shipping_state', 'billing_zip':'shipping_zip',
+        'billing_country':'shipping_country'
+    };
+    Object.keys(map).forEach(function(from) {
+        var el = document.getElementById(map[from]);
+        if (el) el.value = document.getElementById(from).value;
+    });
+}
+
+function saveRecipientAddress() {
+    var id   = document.getElementById('recipientSelect').value;
+    var type = document.getElementById('recipientType').value;
+    if (!id) return;
+
+    var fields = ['billing_name','billing_phone','billing_address','billing_city','billing_state','billing_zip','billing_country',
+                  'shipping_name','shipping_phone','shipping_address','shipping_city','shipping_state','shipping_zip','shipping_country'];
+    var body = new FormData();
+    body.append('_token', '{{ csrf_token() }}');
+    body.append('id', id);
+    body.append('type', type);
+    fields.forEach(function(f) {
+        var el = document.getElementById(f);
+        body.append(f, el ? el.value : '');
+    });
+
+    var btn = document.getElementById('recipientSaveBtn');
+    var msg = document.getElementById('recipientMsg');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="ti ti-loader"></i> {{ __("Saving...") }}';
+
+    fetch('{{ route("print.recipient.update") }}', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: body
+    })
+    .then(r => r.json())
+    .then(function(data) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-device-floppy"></i> {{ __("Save Address") }}';
+        if (data.success) {
+            msg.style.display = 'inline';
+            msg.style.color = '#059669';
+            msg.textContent = '✓ ' + data.message;
+            setTimeout(function() { msg.style.display = 'none'; }, 3000);
+        } else {
+            msg.style.display = 'inline';
+            msg.style.color = '#dc2626';
+            msg.textContent = data.error || '{{ __("Error saving.") }}';
+        }
+    })
+    .catch(function() {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="ti ti-device-floppy"></i> {{ __("Save Address") }}';
+        alert('{{ __("Request failed.") }}');
+    });
+}
 </script>
 @endpush
 
@@ -373,7 +481,7 @@ function toggleCompanyInfo(header) {
     {{-- COMPANY INFO CARD (collapsible) --}}
     {{-- ══════════════════════════════════════════════════════════════ --}}
     <div class="ps-company-card">
-        <div class="ps-company-head" onclick="toggleCompanyInfo(this)">
+        <div class="ps-company-head" onclick="toggleSection('companyInfoBody', this)">
             <div class="ps-company-head-left">
                 <div class="ps-card-icon blue" style="width:36px;height:36px;font-size:.95rem;">
                     <i class="ti ti-building"></i>
@@ -503,8 +611,149 @@ function toggleCompanyInfo(header) {
         </div>
     </div>
 
+    {{-- ══════════════════════════════════════════════════════════════ --}}
+    {{-- RECIPIENT ADDRESS CARD (collapsible) --}}
+    {{-- ══════════════════════════════════════════════════════════════ --}}
+    <div class="ps-company-card">
+        <div class="ps-company-head" onclick="toggleSection('recipientBody', this)">
+            <div class="ps-company-head-left">
+                <div class="ps-card-icon" style="width:36px;height:36px;font-size:.95rem;background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 6px 14px rgba(217,119,6,.25);">
+                    <i class="ti ti-user-circle"></i>
+                </div>
+                <div>
+                    <p class="ps-card-title">{{ __('Recipient Address') }}</p>
+                    <p class="ps-card-sub">{{ __('Edit billing & shipping address of any customer or vendor') }}</p>
+                </div>
+            </div>
+            <i class="ti ti-chevron-down ps-company-toggle-icon"></i>
+        </div>
+        <div class="ps-company-body" id="recipientBody">
+
+            {{-- Type + Search Row --}}
+            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;align-items:flex-end;">
+                <div style="flex:0 0 160px;">
+                    <label class="ps-label">{{ __('Type') }}</label>
+                    <select id="recipientType" class="ps-select" onchange="clearRecipientForm()">
+                        <option value="customer">{{ __('Customer') }}</option>
+                        <option value="vendor">{{ __('Vendor') }}</option>
+                    </select>
+                </div>
+                <div style="flex:1;min-width:200px;">
+                    <label class="ps-label">{{ __('Select Customer / Vendor') }}</label>
+                    <select id="recipientSelect" class="ps-select" onchange="loadRecipient(this.value)">
+                        <option value="">— {{ __('Choose one') }} —</option>
+                        @foreach($customers as $c)
+                            <option value="{{ $c->id }}" data-type="customer">{{ $c->name }}@if($c->email) ({{ $c->email }})@endif</option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
+            {{-- Address Form (hidden until a recipient is selected) --}}
+            <div id="recipientForm" style="display:none;">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+                    {{-- Billing --}}
+                    <div>
+                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+                            <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;flex-shrink:0;">
+                                <i class="ti ti-map-pin"></i>
+                            </div>
+                            <span style="font-size:.82rem;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:.07em;">{{ __('Billing Address') }}</span>
+                        </div>
+                        <div class="ps-field">
+                            <label class="ps-label">{{ __('Full Name') }}</label>
+                            <input type="text" id="billing_name" class="ps-input" placeholder="{{ __('Recipient name') }}">
+                        </div>
+                        <div class="ps-field">
+                            <label class="ps-label">{{ __('Phone') }}</label>
+                            <input type="text" id="billing_phone" class="ps-input" placeholder="+1 234 567 8900">
+                        </div>
+                        <div class="ps-field">
+                            <label class="ps-label">{{ __('Street Address') }}</label>
+                            <textarea id="billing_address" class="ps-input" rows="2" style="height:auto;resize:vertical;" placeholder="{{ __('Street address') }}"></textarea>
+                        </div>
+                        <div class="ps-input-grid ps-field">
+                            <div>
+                                <label class="ps-label">{{ __('City') }}</label>
+                                <input type="text" id="billing_city" class="ps-input" placeholder="{{ __('City') }}">
+                            </div>
+                            <div>
+                                <label class="ps-label">{{ __('State') }}</label>
+                                <input type="text" id="billing_state" class="ps-input" placeholder="{{ __('State') }}">
+                            </div>
+                            <div>
+                                <label class="ps-label">{{ __('ZIP Code') }}</label>
+                                <input type="text" id="billing_zip" class="ps-input" placeholder="10001">
+                            </div>
+                            <div>
+                                <label class="ps-label">{{ __('Country') }}</label>
+                                <input type="text" id="billing_country" class="ps-input" placeholder="{{ __('Country') }}">
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- Shipping --}}
+                    <div>
+                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                            <div style="display:flex;align-items:center;gap:8px;">
+                                <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#34d399,#059669);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;flex-shrink:0;">
+                                    <i class="ti ti-truck"></i>
+                                </div>
+                                <span style="font-size:.82rem;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:.07em;">{{ __('Shipping Address') }}</span>
+                            </div>
+                            <button type="button" onclick="copyBillingToShipping()" style="font-size:.72rem;font-weight:700;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:4px 10px;cursor:pointer;">
+                                <i class="ti ti-copy"></i> {{ __('Same as Billing') }}
+                            </button>
+                        </div>
+                        <div class="ps-field">
+                            <label class="ps-label">{{ __('Full Name') }}</label>
+                            <input type="text" id="shipping_name" class="ps-input" placeholder="{{ __('Recipient name') }}">
+                        </div>
+                        <div class="ps-field">
+                            <label class="ps-label">{{ __('Phone') }}</label>
+                            <input type="text" id="shipping_phone" class="ps-input" placeholder="+1 234 567 8900">
+                        </div>
+                        <div class="ps-field">
+                            <label class="ps-label">{{ __('Street Address') }}</label>
+                            <textarea id="shipping_address" class="ps-input" rows="2" style="height:auto;resize:vertical;" placeholder="{{ __('Street address') }}"></textarea>
+                        </div>
+                        <div class="ps-input-grid ps-field">
+                            <div>
+                                <label class="ps-label">{{ __('City') }}</label>
+                                <input type="text" id="shipping_city" class="ps-input" placeholder="{{ __('City') }}">
+                            </div>
+                            <div>
+                                <label class="ps-label">{{ __('State') }}</label>
+                                <input type="text" id="shipping_state" class="ps-input" placeholder="{{ __('State') }}">
+                            </div>
+                            <div>
+                                <label class="ps-label">{{ __('ZIP Code') }}</label>
+                                <input type="text" id="shipping_zip" class="ps-input" placeholder="10001">
+                            </div>
+                            <div>
+                                <label class="ps-label">{{ __('Country') }}</label>
+                                <input type="text" id="shipping_country" class="ps-input" placeholder="{{ __('Country') }}">
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                {{-- Save Button --}}
+                <div style="margin-top:20px;display:flex;align-items:center;gap:12px;">
+                    <button type="button" onclick="saveRecipientAddress()" class="ps-save-sm" id="recipientSaveBtn">
+                        <i class="ti ti-device-floppy"></i> {{ __('Save Address') }}
+                    </button>
+                    <span id="recipientMsg" style="font-size:.82rem;font-weight:600;display:none;"></span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
     {{-- ── Tab Navigation ── --}}
-    <div class="ps-tabs">
+    <div class="ps-tabs" id="psTabNav">
         <button class="ps-tab active" onclick="switchTab('proposal', this)">
             <i class="ti ti-file-text"></i> {{ __('Proposal Print Setting') }}
         </button>

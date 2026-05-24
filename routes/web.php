@@ -476,6 +476,9 @@ Route::group(
         Route::post('telegram-settings', [SystemController::class, 'saveTelegramSettings'])->name('telegram.settings');
         Route::post('twilio-settings', [SystemController::class, 'saveTwilioSettings'])->name('twilio.setting');
         Route::get('print-setting', [SystemController::class, 'printIndex'])->name('print.setting');
+        Route::get('print-setting/recipient-data', [SystemController::class, 'getRecipientData'])->name('print.recipient.data');
+        Route::post('print-setting/recipient-update', [SystemController::class, 'updateRecipientAddress'])->name('print.recipient.update');
+        Route::post('receipt-settings', [SystemController::class, 'saveReceiptSettings'])->name('receipt.settings');
         Route::get('settings', [SystemController::class, 'companyIndex'])->name('settings');
         Route::post('business-setting', [SystemController::class, 'saveBusinessSettings'])->name('business.setting');
         Route::post('company-payment-setting', [SystemController::class, 'saveCompanyPaymentSettings'])->name('company.payment.settings');

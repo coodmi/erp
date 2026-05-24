@@ -967,14 +967,133 @@ class SystemController extends Controller
     {
         if(\Auth::user()->can('manage print settings'))
         {
-            $settings = Utility::settings();
+            $settings  = Utility::settings();
+            $customers = \App\Models\Customer::where('created_by', \Auth::user()->creatorId())
+                            ->select('id','name','email','contact')->orderBy('name')->get();
+            $vendors   = \App\Models\Vender::where('created_by', \Auth::user()->creatorId())
+                            ->select('id','name','email','contact')->orderBy('name')->get();
 
-            return view('settings.print', compact('settings'));
+            return view('settings.print', compact('settings', 'customers', 'vendors'));
         }
         else
         {
             return redirect()->back()->with('error', 'Permission denied.');
         }
+    }
+
+    public function getRecipientData(Request $request)
+    {
+        if(!\Auth::user()->can('manage print settings'))
+        {
+            return response()->json(['error' => 'Permission denied.'], 403);
+        }
+
+        $type = $request->get('type', 'customer'); // 'customer' or 'vendor'
+        $id   = $request->get('id');
+
+        if($type === 'customer') {
+            $record = \App\Models\Customer::where('created_by', \Auth::user()->creatorId())->find($id);
+        } else {
+            $record = \App\Models\Vender::where('created_by', \Auth::user()->creatorId())->find($id);
+        }
+
+        if(!$record) {
+            return response()->json(['error' => 'Not found.'], 404);
+        }
+
+        return response()->json([
+            'id'               => $record->id,
+            'name'             => $record->name,
+            'email'            => $record->email ?? '',
+            'contact'          => $record->contact ?? '',
+            'billing_name'     => $record->billing_name ?? '',
+            'billing_phone'    => $record->billing_phone ?? '',
+            'billing_address'  => $record->billing_address ?? '',
+            'billing_city'     => $record->billing_city ?? '',
+            'billing_state'    => $record->billing_state ?? '',
+            'billing_country'  => $record->billing_country ?? '',
+            'billing_zip'      => $record->billing_zip ?? '',
+            'shipping_name'    => $record->shipping_name ?? '',
+            'shipping_phone'   => $record->shipping_phone ?? '',
+            'shipping_address' => $record->shipping_address ?? '',
+            'shipping_city'    => $record->shipping_city ?? '',
+            'shipping_state'   => $record->shipping_state ?? '',
+            'shipping_country' => $record->shipping_country ?? '',
+            'shipping_zip'     => $record->shipping_zip ?? '',
+        ]);
+    }
+
+    public function updateRecipientAddress(Request $request)
+    {
+        if(!\Auth::user()->can('manage print settings'))
+        {
+            return response()->json(['error' => 'Permission denied.'], 403);
+        }
+
+        $type = $request->get('type', 'customer');
+        $id   = $request->get('id');
+
+        if($type === 'customer') {
+            $record = \App\Models\Customer::where('created_by', \Auth::user()->creatorId())->find($id);
+        } else {
+            $record = \App\Models\Vender::where('created_by', \Auth::user()->creatorId())->find($id);
+        }
+
+        if(!$record) {
+            return response()->json(['error' => 'Not found.'], 404);
+        }
+
+        $record->billing_name     = $request->billing_name;
+        $record->billing_phone    = $request->billing_phone;
+        $record->billing_address  = $request->billing_address;
+        $record->billing_city     = $request->billing_city;
+        $record->billing_state    = $request->billing_state;
+        $record->billing_country  = $request->billing_country;
+        $record->billing_zip      = $request->billing_zip;
+        $record->shipping_name    = $request->shipping_name;
+        $record->shipping_phone   = $request->shipping_phone;
+        $record->shipping_address = $request->shipping_address;
+        $record->shipping_city    = $request->shipping_city;
+        $record->shipping_state   = $request->shipping_state;
+        $record->shipping_country = $request->shipping_country;
+        $record->shipping_zip     = $request->shipping_zip;
+        $record->save();
+
+        return response()->json(['success' => true, 'message' => __('Address updated successfully.')]);
+    }
+
+    public function saveReceiptSettings(Request $request)
+    {
+        if(!\Auth::user()->can('manage print settings'))
+        {
+            return redirect()->back()->with('error', 'Permission denied.');
+        }
+
+        $post = $request->all();
+        unset($post['_token']);
+
+        // Handle receipt logo upload
+        if($request->hasFile('receipt_logo'))
+        {
+            $dir = 'receipt_logo/';
+            $receipt_logo = \Auth::user()->id . '_receipt_logo.png';
+            $validation = ['mimes:png,jpg,jpeg', 'max:20480'];
+            $path = Utility::upload_file($request, 'receipt_logo', $receipt_logo, $dir, $validation);
+            if($path['flag'] == 0) {
+                return redirect()->back()->with('error', __($path['msg']));
+            }
+            $post['receipt_logo'] = $receipt_logo;
+        }
+
+        foreach($post as $key => $data)
+        {
+            \DB::insert(
+                'insert into settings (`value`, `name`, `created_by`) values (?, ?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`)',
+                [$data, $key, \Auth::user()->creatorId()]
+            );
+        }
+
+        return redirect()->back()->with('success', __('Receipt settings updated successfully'));
     }
 
     public function posPrintIndex()
