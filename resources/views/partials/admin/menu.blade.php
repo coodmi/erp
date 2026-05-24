@@ -596,14 +596,14 @@
                                             <a class="dash-link" href="{{ route('pos.report') }}">{{__('POS')}}</a>
                                         </li>
                                     @endcan
-                                    <li class="dash-item dash-hasmenu {{ request()->fullUrl() == url('/vendors/pos') ? 'active' : '' }}">
-                                        <a class="dash-link" href="/vendors/pos">{{__('Vendors ')}}</a>
+                                    <li class="dash-item dash-hasmenu {{ request()->fullUrl() == url('/vendors') ? 'active' : '' }}">
+                                        <a class="dash-link" href="/vendors">{{__('Vendors ')}}</a>
                                     </li>
-                                    <li class="dash-item dash-hasmenu {{ request()->fullUrl() == url('/agents/pos') ? 'active' : '' }}">
-                                        <a class="dash-link" href="/agents/pos">{{__('Agents ')}}</a>
+                                    <li class="dash-item dash-hasmenu {{ request()->fullUrl() == url('/agents') ? 'active' : '' }}">
+                                        <a class="dash-link" href="/agents">{{__('Agents ')}}</a>
                                     </li>
-                                    <li class="dash-item dash-hasmenu {{ request()->fullUrl() == url('/clients/pos') ? 'active' : '' }}">
-                                        <a class="dash-link" href="/vclients/pos">{{__('Clients ')}}</a>
+                                    <li class="dash-item dash-hasmenu {{ request()->fullUrl() == url('/vclients') ? 'active' : '' }}">
+                                        <a class="dash-link" href="/vclients">{{__('Clients ')}}</a>
                                     </li>
                                     <!-- <li class="dash-item dash-hasmenu {{ request()->fullUrl() == url('/expenses') ? 'active' : '' }}">
                                         <a class="dash-link" href="/expenses">{{__('Expenses ')}}</a>

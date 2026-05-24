@@ -169,18 +169,7 @@ Route::get('/vclients/dashboard', function () {
     return view('vclients.dashboard');
     
 });
-Route::get('/vendors/pos', function () {
-    return view('vendors.pos');
-    
-});
-Route::get('/vclients/pos', function () {
-    return view('vclients.pos');
-    
-});
-Route::get('/agents/pos', function () {
-    return view('agents.pos');
-    
-});
+
 
  
 Route::get('/vclients', function (Request $request) {
