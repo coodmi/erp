@@ -21,6 +21,14 @@
     $client = !empty($results) ? $results[0] : null;
     $inv_id = 'RCP-' . strtoupper(\Str::random(8));
     $visaLabels = ['WV'=>'Work Permit Visa','SV'=>'Student Visa','TV'=>'Tourist Visa','BV'=>'Business Visa','OV'=>'Others'];
+
+    // Use invoice_logo if uploaded, else fall back to company_logo_dark
+    $invoice_logo = \App\Models\Utility::getValByName('invoice_logo');
+    if (!empty($invoice_logo)) {
+        $logoImg = \App\Models\Utility::get_file('invoice_logo/') . $invoice_logo;
+    } else {
+        $logoImg = $logo . '/' . ($company_logo ?: 'logo-dark.png');
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -136,7 +144,7 @@
     <div class="receipt" id="receipt-area">
         {{-- Header --}}
         <div class="receipt-header">
-            <img src="{{ $logo . '/' . ($company_logo ?: 'logo-dark.png') }}" alt="Logo">
+            <img src="{{ $logoImg }}" alt="Logo">
             <div class="receipt-title">
                 <h1>Money Receipt</h1>
                 <p>{{ $settings['company_name'] ?? 'Eraz-ehan International' }}</p>
@@ -267,7 +275,7 @@
         {{-- Footer --}}
         <div class="receipt-footer">
             <div>
-                <img src="{{ $logo . '/' . ($company_logo ?: 'logo-dark.png') }}" alt="Logo">
+                <img src="{{ $logoImg }}" alt="Logo">
                 <p style="color:rgba(255,255,255,.75);font-size:.75rem;margin-top:6px;">{{ $settings['company_address'] ?? '' }}</p>
             </div>
             <div class="receipt-footer-info">

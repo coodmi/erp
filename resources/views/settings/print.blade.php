@@ -200,9 +200,16 @@ document.getElementById('bill_logo').onchange = function () {
                     </div>
                     <div class="mb-2">
                         <label class="ps-form-label">Proposal Logo</label>
+                        @php $cur_proposal_logo = \App\Models\Utility::getValByName('proposal_logo'); @endphp
+                        @if(!empty($cur_proposal_logo))
+                        <div style="margin-bottom:10px;padding:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;display:flex;align-items:center;gap:10px;">
+                            <img src="{{ \App\Models\Utility::get_file('proposal_logo/') . $cur_proposal_logo }}" style="height:36px;width:auto;object-fit:contain;border-radius:6px;" alt="Current Logo">
+                            <span style="font-size:.75rem;color:#059669;font-weight:700;">✓ Current logo active</span>
+                        </div>
+                        @endif
                         <label class="ps-upload-area" for="proposal_logo">
                             <i class="ti ti-cloud-upload"></i>
-                            <span>Click to upload logo</span>
+                            <span>Click to upload new logo</span>
                             <input type="file" name="proposal_logo" id="proposal_logo" accept="image/*">
                         </label>
                         <img id="proposal_image" class="ps-logo-preview" src="" alt="Logo Preview">
@@ -267,9 +274,16 @@ document.getElementById('bill_logo').onchange = function () {
                     </div>
                     <div class="mb-2">
                         <label class="ps-form-label">Invoice Logo</label>
+                        @php $cur_invoice_logo = \App\Models\Utility::getValByName('invoice_logo'); @endphp
+                        @if(!empty($cur_invoice_logo))
+                        <div style="margin-bottom:10px;padding:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;display:flex;align-items:center;gap:10px;">
+                            <img src="{{ \App\Models\Utility::get_file('invoice_logo/') . $cur_invoice_logo }}" style="height:36px;width:auto;object-fit:contain;border-radius:6px;" alt="Current Logo">
+                            <span style="font-size:.75rem;color:#059669;font-weight:700;">✓ Current logo active</span>
+                        </div>
+                        @endif
                         <label class="ps-upload-area" for="invoice_logo">
                             <i class="ti ti-cloud-upload"></i>
-                            <span>Click to upload logo</span>
+                            <span>Click to upload new logo</span>
                             <input type="file" name="invoice_logo" id="invoice_logo" accept="image/*">
                         </label>
                         <img id="invoice_image" class="ps-logo-preview" src="" alt="Logo Preview">
@@ -333,9 +347,16 @@ document.getElementById('bill_logo').onchange = function () {
                     </div>
                     <div class="mb-2">
                         <label class="ps-form-label">Bill Logo</label>
+                        @php $cur_bill_logo = \App\Models\Utility::getValByName('bill_logo'); @endphp
+                        @if(!empty($cur_bill_logo))
+                        <div style="margin-bottom:10px;padding:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:10px;display:flex;align-items:center;gap:10px;">
+                            <img src="{{ \App\Models\Utility::get_file('bill_logo/') . $cur_bill_logo }}" style="height:36px;width:auto;object-fit:contain;border-radius:6px;" alt="Current Logo">
+                            <span style="font-size:.75rem;color:#059669;font-weight:700;">✓ Current logo active</span>
+                        </div>
+                        @endif
                         <label class="ps-upload-area" for="bill_logo">
                             <i class="ti ti-cloud-upload"></i>
-                            <span>Click to upload logo</span>
+                            <span>Click to upload new logo</span>
                             <input type="file" name="bill_logo" id="bill_logo" accept="image/*">
                         </label>
                         <img id="bill_image" class="ps-logo-preview" src="" alt="Logo Preview">
