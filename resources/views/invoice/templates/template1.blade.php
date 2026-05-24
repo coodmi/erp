@@ -59,10 +59,10 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-
 
 /* RIGHT: title + meta */
 .inv-head-right{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:16px}
-.inv-doc-title{font-size:40px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--hfg);opacity:.95;line-height:1;text-align:right}
+.inv-doc-title{font-size:26px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--hfg);opacity:.95;line-height:1;text-align:right}
 .inv-meta{border-collapse:collapse}
-.inv-meta td{padding:2.5px 0;font-size:12px;color:rgba(255,255,255,.8)}
-.inv-meta td:first-child{padding-right:20px;white-space:nowrap;font-weight:500}
+.inv-meta td{padding:2px 0;font-size:11px;color:rgba(255,255,255,.8)}
+.inv-meta td:first-child{padding-right:14px;white-space:nowrap;font-weight:500}
 .inv-meta td:last-child{text-align:right;font-weight:700;color:var(--hfg)}
 
 /* ── body ── */
