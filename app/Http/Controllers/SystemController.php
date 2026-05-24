@@ -969,14 +969,13 @@ class SystemController extends Controller
         {
             $settings  = Utility::settings();
 
-            $customers = \App\Models\Customer::where('created_by', \Auth::user()->creatorId())
-                            ->select('id','name','email','contact')->orderBy('name')->get()
+            $customers = \App\Models\VClient::select('id','client_name','passport_no','agent_id')->orderBy('client_name')->get()
                             ->map(function($c) {
                                 return [
                                     'id'      => $c->id,
-                                    'name'    => $c->name,
-                                    'email'   => $c->email ?? '',
-                                    'contact' => $c->contact ?? '',
+                                    'name'    => $c->client_name,
+                                    'email'   => $c->passport_no ?? '',
+                                    'contact' => '',
                                 ];
                             })->values();
 
@@ -991,17 +990,13 @@ class SystemController extends Controller
                                 ];
                             })->values();
 
-            $agents = \App\Models\User::where('created_by', \Auth::user()->creatorId())
-                            ->where('type', '!=', 'super admin')
-                            ->where('type', '!=', 'company')
-                            ->where('type', '!=', 'client')
-                            ->select('id','name','email','type')->orderBy('name')->get()
-                            ->map(function($u) {
+            $agents = \App\Models\Agent::select('id','agent_name','unique_code')->orderBy('agent_name')->get()
+                            ->map(function($a) {
                                 return [
-                                    'id'    => $u->id,
-                                    'name'  => $u->name,
-                                    'email' => $u->email ?? '',
-                                    'type'  => $u->type ?? 'staff',
+                                    'id'    => $a->id,
+                                    'name'  => $a->agent_name,
+                                    'email' => $a->unique_code ?? '',
+                                    'type'  => 'agent',
                                 ];
                             })->values();
 

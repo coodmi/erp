@@ -35,8 +35,8 @@ document.addEventListener('DOMContentLoaded', function () {
             if (this.files[0]) { img.src = URL.createObjectURL(this.files[0]); img.style.display = 'block'; }
         });
     }
-    // init bill card disabled
-    updatePartyDropdown();
+    // set initial type without rebuilding dropdown (agents already rendered in blade)
+    _psCurrentType = 'agent';
 });
 
 // ── Party type selector ──
@@ -297,8 +297,7 @@ function updatePartyDropdown() {
                     @foreach($agents as $a)
                         <option value="{{ $a['id'] }}">{{ $a['name'] }}@if($a['email']) · {{ $a['email'] }}@endif</option>
                     @endforeach
-                </select>
-            </div>
+                </select>            </div>
 
             {{-- Party info preview --}}
             <div id="ps_party_info" style="display:none;padding:12px 14px;border-radius:12px;border:1px solid #bbf7d0;background:linear-gradient(135deg,#f0fdf4,#dcfce7);margin-top:4px;">
@@ -558,7 +557,8 @@ function onPartySelect(id) {
 }
 
 function updatePartyDropdown() {
-    setPartyType('agent');
+    // agents are pre-rendered in blade, just set the type
+    _psCurrentType = 'agent';
 }
 </script>
 @endsection
