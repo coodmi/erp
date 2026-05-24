@@ -991,7 +991,21 @@ class SystemController extends Controller
                                 ];
                             })->values();
 
-            return view('settings.print', compact('settings', 'customers', 'vendors'));
+            $agents = \App\Models\User::where('created_by', \Auth::user()->creatorId())
+                            ->where('type', '!=', 'super admin')
+                            ->where('type', '!=', 'company')
+                            ->where('type', '!=', 'client')
+                            ->select('id','name','email','type')->orderBy('name')->get()
+                            ->map(function($u) {
+                                return [
+                                    'id'    => $u->id,
+                                    'name'  => $u->name,
+                                    'email' => $u->email ?? '',
+                                    'type'  => $u->type ?? 'staff',
+                                ];
+                            })->values();
+
+            return view('settings.print', compact('settings', 'customers', 'vendors', 'agents'));
         }
         else
         {

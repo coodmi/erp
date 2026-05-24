@@ -1,6 +1,5 @@
 @extends('layouts.admin')
 @section('page-title'){{ __('Print Settings') }}@endsection
-
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a></li>
     <li class="breadcrumb-item active">{{ __('Print Settings') }}</li>
@@ -8,1413 +7,558 @@
 
 @push('script-page')
 <script>
-// Toggle VAT field visibility
-function toggleVat(el) {
-    document.getElementById('vat-fields').style.display = el.checked ? 'block' : 'none';
-}
-// Live preview update on template/color change
-$(document).on("change", "select[name='proposal_template'], input[name='proposal_color']", function () {
-    var template = $("select[name='proposal_template']").val();
-    var color    = $("input[name='proposal_color']:checked").val() || 'ffffff';
-    $('#proposal_frame').attr('src', '{{ url('/proposal/preview') }}/' + template + '/' + color);
+// ── data from server ──
+var _psCustomers = {!! json_encode($customers) !!};
+var _psVendors   = {!! json_encode($vendors) !!};
+var _psAgents    = {!! json_encode($agents) !!};
+
+var _psSelectedParty = null; // { id, name, email, partyType: 'agent'|'client'|'vendor' }
+
+// ── template/color live preview ──
+$(document).on('change', "select[name='invoice_template'], input[name='invoice_color']", function () {
+    refreshPreview();
 });
-$(document).on("change", "select[name='invoice_template'], input[name='invoice_color']", function () {
+
+function refreshPreview() {
     var template = $("select[name='invoice_template']").val();
     var color    = $("input[name='invoice_color']:checked").val() || 'ffffff';
-    $('#invoice_frame').attr('src', '{{ url('/invoices/preview') }}/' + template + '/' + color);
-});
-$(document).on("change", "select[name='bill_template'], input[name='bill_color']", function () {
-    var template = $("select[name='bill_template']").val();
-    var color    = $("input[name='bill_color']:checked").val() || 'ffffff';
-    $('#bill_frame').attr('src', '{{ url('/bill/preview') }}/' + template + '/' + color);
-});
+    var src      = '{{ url("/invoices/preview") }}/' + template + '/' + color;
+    document.getElementById('invoice_frame').src = src;
+}
 
-// Logo preview on file select
-['proposal','invoice','bill'].forEach(function(type) {
-    var input = document.getElementById(type + '_logo');
-    var img   = document.getElementById(type + '_image');
-    if (input && img) {
-        input.addEventListener('change', function() {
-            if (this.files[0]) {
-                img.src = URL.createObjectURL(this.files[0]);
-                img.style.display = 'block';
-            }
+// logo preview
+document.addEventListener('DOMContentLoaded', function () {
+    var inp = document.getElementById('invoice_logo');
+    var img = document.getElementById('invoice_image');
+    if (inp && img) {
+        inp.addEventListener('change', function () {
+            if (this.files[0]) { img.src = URL.createObjectURL(this.files[0]); img.style.display = 'block'; }
         });
     }
+    // init bill card disabled
+    updatePartyDropdown();
 });
 
-function switchTab(tab, btn) {
-    document.querySelectorAll('.ps-pane').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.ps-tab').forEach(b => b.classList.remove('active'));
-    document.getElementById('pane-' + tab).classList.add('active');
-    btn.classList.add('active');
-}
+// ── Party type selector ──
+function updatePartyDropdown() {
+    var type = document.getElementById('ps_party_type').value;
+    var sel  = document.getElementById('ps_party_id');
+    sel.innerHTML = '<option value="">— ' + (type === 'agent' ? '{{ __("Select Agent") }}' : type === 'client' ? '{{ __("Select Client") }}' : '{{ __("Select Vendor") }}') + ' —</option>';
 
-function toggleCompanyInfo(header) {
-    var body = document.getElementById('companyInfoBody');
-    var icon = header.querySelector('.ps-company-toggle-icon');
-    var isOpen = body.classList.contains('open');
-    body.classList.toggle('open', !isOpen);
-    icon.classList.toggle('open', !isOpen);
-}
-
-// ── Generic section toggle ──
-function toggleSection(bodyId, header) {
-    var body = document.getElementById(bodyId);
-    var icon = header.querySelector('.ps-company-toggle-icon');
-    var isOpen = body.classList.contains('open');
-    body.classList.toggle('open', !isOpen);
-    icon.classList.toggle('open', !isOpen);
-}
-
-// ══════════════════════════════════════════════
-// QUICK LAUNCHER
-// ══════════════════════════════════════════════
-var _qlCustomers = {!! json_encode($customers) !!};
-var _qlVendors   = {!! json_encode($vendors) !!};
-var _qlSelectedDoc  = null;
-var _qlSelectedType = 'customer';
-
-// Routes for document creation
-var _qlRoutes = {
-    invoice:  '{{ url("invoice/create") }}',
-    proposal: '{{ url("proposal/create") }}',
-    bill:     '{{ url("bill/create") }}',
-};
-
-function qlUpdateClientList() {
-    _qlSelectedType = document.getElementById('ql_type').value;
-    var list = _qlSelectedType === 'customer' ? _qlCustomers : _qlVendors;
-    var sel  = document.getElementById('ql_client');
-    sel.innerHTML = '<option value="">— {{ __("Choose client") }} —</option>';
-    list.forEach(function(item) {
+    var list = type === 'agent' ? _psAgents : (type === 'client' ? _psCustomers : _psVendors);
+    list.forEach(function (item) {
         var opt = document.createElement('option');
         opt.value = item.id;
-        opt.textContent = item.name + (item.email ? ' · ' + item.email : '');
+        opt.textContent = item.name + (item.email ? '  ·  ' + item.email : '');
         sel.appendChild(opt);
     });
-    // Reset UI
-    document.getElementById('ql_client_preview').style.display = 'none';
-    document.getElementById('ql_launch_wrap').style.display = 'none';
-    _qlSelectedDoc = null;
-    qlResetDocCards();
-
-    // Bill only for vendors
-    var billCard = document.getElementById('ql_card_bill');
-    var invoiceCard  = document.getElementById('ql_card_invoice');
-    var proposalCard = document.getElementById('ql_card_proposal');
-    var notice = document.getElementById('ql_vendor_notice');
-    if (_qlSelectedType === 'vendor') {
-        invoiceCard.classList.add('disabled');
-        proposalCard.classList.add('disabled');
-        billCard.classList.remove('disabled');
-        notice.style.display = 'block';
-        // Auto-select bill for vendor
-        document.querySelector('input[value="bill"]').checked = true;
-        qlDocSelect('bill');
-    } else {
-        invoiceCard.classList.remove('disabled');
-        proposalCard.classList.remove('disabled');
-        billCard.classList.add('disabled');
-        notice.style.display = 'none';
-    }
-}
-
-function qlLoadClientInfo() {
-    var id   = document.getElementById('ql_client').value;
-    var type = document.getElementById('ql_type').value;
-    if (!id) {
-        document.getElementById('ql_client_preview').style.display = 'none';
-        document.getElementById('ql_launch_wrap').style.display = 'none';
-        return;
-    }
-    var list   = type === 'customer' ? _qlCustomers : _qlVendors;
-    var client = list.find(function(c) { return c.id == id; });
-    if (!client) return;
-
-    document.getElementById('ql_avatar_letter').textContent = client.name.charAt(0).toUpperCase();
-    document.getElementById('ql_client_name').textContent   = client.name;
-    document.getElementById('ql_client_email').textContent  = client.email || client.contact || '—';
-
-    // Load address via AJAX
-    fetch('{{ route("print.recipient.data") }}?type=' + type + '&id=' + id, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(r => r.json())
-    .then(function(data) {
-        var addr = [];
-        if (data.billing_address) addr.push(data.billing_address);
-        if (data.billing_city)    addr.push(data.billing_city);
-        if (data.billing_country) addr.push(data.billing_country);
-        document.getElementById('ql_client_address').textContent = addr.length ? addr.join(', ') : '{{ __("No address on file") }}';
-    }).catch(function() {});
-
-    var badge = document.getElementById('ql_client_badge');
-    badge.textContent = type === 'customer' ? '{{ __("Customer") }}' : '{{ __("Vendor") }}';
-    badge.className   = 'ql-badge ' + (type === 'customer' ? 'ql-badge-customer' : 'ql-badge-vendor');
-
-    document.getElementById('ql_client_preview').style.display = 'block';
-    qlCheckLaunch();
-}
-
-function qlDocSelect(docType) {
-    _qlSelectedDoc = docType;
-    qlResetDocCards();
-    document.getElementById('ql_card_' + docType).classList.add('selected');
-    qlCheckLaunch();
-}
-
-function qlResetDocCards() {
-    ['invoice','proposal','bill'].forEach(function(t) {
-        var card = document.getElementById('ql_card_' + t);
-        if (card) card.classList.remove('selected');
-    });
-}
-
-function qlCheckLaunch() {
-    var clientId = document.getElementById('ql_client').value;
-    if (!clientId || !_qlSelectedDoc) {
-        document.getElementById('ql_launch_wrap').style.display = 'none';
-        return;
-    }
-    var clientName = document.getElementById('ql_client_name').textContent;
-    var docLabels  = { invoice: '{{ __("Invoice") }}', proposal: '{{ __("Proposal") }}', bill: '{{ __("Bill") }}' };
-    document.getElementById('ql_summary_text').textContent =
-        '{{ __("Ready to create") }} ' + docLabels[_qlSelectedDoc] + ' {{ __("for") }} ' + clientName;
-    document.getElementById('ql_launch_label').textContent =
-        '{{ __("Create") }} ' + docLabels[_qlSelectedDoc] + ' {{ __("for") }} ' + clientName;
-    document.getElementById('ql_launch_wrap').style.display = 'block';
-}
-
-function qlLaunch() {
-    var clientId = document.getElementById('ql_client').value;
-    if (!clientId || !_qlSelectedDoc) return false;
-    var url = _qlRoutes[_qlSelectedDoc] + '/' + clientId;
-    window.location.href = url;
-    return false;
-}
-
-// Init: disable bill for customer by default
-document.addEventListener('DOMContentLoaded', function() {
-    document.getElementById('ql_card_bill').classList.add('disabled');
-});
-
-// ── Recipient Address ──
-var _customerOptions = {!! json_encode($customers) !!};
-var _vendorOptions   = {!! json_encode($vendors) !!};
-
-function clearRecipientForm() {
-    document.getElementById('recipientSelect').innerHTML = '<option value="">— {{ __("Choose one") }} —</option>';
-    var type = document.getElementById('recipientType').value;
-    var list = type === 'customer' ? _customerOptions : _vendorOptions;
-    list.forEach(function(item) {
-        var opt = document.createElement('option');
-        opt.value = item.id;
-        opt.textContent = item.name + (item.email ? ' (' + item.email + ')' : '');
-        document.getElementById('recipientSelect').appendChild(opt);
-    });
-    document.getElementById('recipientForm').style.display = 'none';
-}
-
-function loadRecipient(id) {
-    if (!id) { document.getElementById('recipientForm').style.display = 'none'; return; }
-    var type = document.getElementById('recipientType').value;
-    fetch('{{ route("print.recipient.data") }}?type=' + type + '&id=' + id, {
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(r => r.json())
-    .then(function(data) {
-        if (data.error) { alert(data.error); return; }
-        var fields = ['billing_name','billing_phone','billing_address','billing_city','billing_state','billing_zip','billing_country',
-                      'shipping_name','shipping_phone','shipping_address','shipping_city','shipping_state','shipping_zip','shipping_country'];
-        fields.forEach(function(f) {
-            var el = document.getElementById(f);
-            if (el) el.value = data[f] || '';
-        });
-        document.getElementById('recipientForm').style.display = 'block';
-        document.getElementById('recipientMsg').style.display = 'none';
-    })
-    .catch(function() { alert('{{ __("Failed to load data.") }}'); });
-}
-
-function copyBillingToShipping() {
-    var map = {
-        'billing_name':'shipping_name', 'billing_phone':'shipping_phone',
-        'billing_address':'shipping_address', 'billing_city':'shipping_city',
-        'billing_state':'shipping_state', 'billing_zip':'shipping_zip',
-        'billing_country':'shipping_country'
-    };
-    Object.keys(map).forEach(function(from) {
-        var el = document.getElementById(map[from]);
-        if (el) el.value = document.getElementById(from).value;
-    });
-}
-
-function saveRecipientAddress() {
-    var id   = document.getElementById('recipientSelect').value;
-    var type = document.getElementById('recipientType').value;
-    if (!id) return;
-
-    var fields = ['billing_name','billing_phone','billing_address','billing_city','billing_state','billing_zip','billing_country',
-                  'shipping_name','shipping_phone','shipping_address','shipping_city','shipping_state','shipping_zip','shipping_country'];
-    var body = new FormData();
-    body.append('_token', '{{ csrf_token() }}');
-    body.append('id', id);
-    body.append('type', type);
-    fields.forEach(function(f) {
-        var el = document.getElementById(f);
-        body.append(f, el ? el.value : '');
-    });
-
-    var btn = document.getElementById('recipientSaveBtn');
-    var msg = document.getElementById('recipientMsg');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="ti ti-loader"></i> {{ __("Saving...") }}';
-
-    fetch('{{ route("print.recipient.update") }}', {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        body: body
-    })
-    .then(r => r.json())
-    .then(function(data) {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="ti ti-device-floppy"></i> {{ __("Save Address") }}';
-        if (data.success) {
-            msg.style.display = 'inline';
-            msg.style.color = '#059669';
-            msg.textContent = '✓ ' + data.message;
-            setTimeout(function() { msg.style.display = 'none'; }, 3000);
-        } else {
-            msg.style.display = 'inline';
-            msg.style.color = '#dc2626';
-            msg.textContent = data.error || '{{ __("Error saving.") }}';
-        }
-    })
-    .catch(function() {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="ti ti-device-floppy"></i> {{ __("Save Address") }}';
-        alert('{{ __("Request failed.") }}');
-    });
+    clearPartyPreview();
 }
 </script>
 @endpush
 
 @section('content')
 <style>
-/* ─── Root Variables ─── */
 :root {
-    --c-bg:      #f0f4f8;
-    --c-white:   #ffffff;
-    --c-border:  #e2e8f0;
-    --c-dark:    #0f172a;
-    --c-muted:   #64748b;
-    --c-blue:    #2563eb;
-    --c-blue-lt: #eff6ff;
-    --c-green:   #059669;
-    --c-purple:  #7c3aed;
-    --radius-lg: 18px;
-    --radius-md: 12px;
-    --shadow-sm: 0 2px 8px rgba(15,23,42,.07);
-    --shadow-md: 0 8px 28px rgba(15,23,42,.10);
+    --c-bg:#f0f4f8; --c-white:#fff; --c-border:#e2e8f0;
+    --c-dark:#0f172a; --c-muted:#64748b;
+    --c-blue:#2563eb; --c-blue-lt:#eff6ff;
+    --c-green:#059669; --c-purple:#7c3aed;
+    --r-lg:18px; --r-md:12px;
+    --sh-sm:0 2px 8px rgba(15,23,42,.07);
+    --sh-md:0 8px 28px rgba(15,23,42,.10);
 }
+.ps-page { padding:4px 0 40px; }
 
-/* ─── Page Wrapper ─── */
-.ps-page { padding: 4px 0 32px; }
-
-/* ─── Tab Navigation ─── */
-.ps-tabs {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin-bottom: 24px;
-    background: var(--c-white);
-    padding: 8px;
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--c-border);
-    box-shadow: var(--shadow-sm);
-}
-.ps-tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 22px;
-    border-radius: var(--radius-md);
-    font-size: .84rem;
-    font-weight: 700;
-    border: none;
-    background: transparent;
-    color: var(--c-muted);
-    cursor: pointer;
-    transition: all .18s ease;
-    letter-spacing: .01em;
-}
-.ps-tab:hover { background: var(--c-bg); color: var(--c-dark); }
-.ps-tab.active {
-    background: linear-gradient(135deg, #3b82f6, #2563eb);
-    color: #fff;
-    box-shadow: 0 6px 18px rgba(37,99,235,.28);
-}
-.ps-tab i { font-size: 1rem; }
-
-/* ─── Tab Panes ─── */
-.ps-pane { display: none; }
-.ps-pane.active { display: block; }
-
-/* ─── Two-column layout ─── */
-.ps-grid {
+/* ── Main grid: left panel + right preview ── */
+.ps-main-grid {
     display: grid;
-    grid-template-columns: 320px 1fr;
+    grid-template-columns: 340px 1fr;
     gap: 20px;
     align-items: start;
 }
-@media (max-width: 1024px) { .ps-grid { grid-template-columns: 1fr; } }
+@media(max-width:1100px){ .ps-main-grid{ grid-template-columns:1fr; } }
 
-/* ─── Settings Card ─── */
+/* ── Left panel ── */
+.ps-left { display:flex; flex-direction:column; gap:16px; }
+
+/* ── Card ── */
 .ps-card {
-    background: var(--c-white);
-    border: 1px solid var(--c-border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    overflow: hidden;
+    background:var(--c-white); border:1px solid var(--c-border);
+    border-radius:var(--r-lg); box-shadow:var(--sh-md); overflow:hidden;
 }
 .ps-card-head {
-    padding: 18px 22px;
-    border-bottom: 1px solid var(--c-border);
-    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-    display: flex;
-    align-items: center;
-    gap: 12px;
+    padding:16px 20px; border-bottom:1px solid var(--c-border);
+    background:linear-gradient(135deg,#f8fafc,#f1f5f9);
+    display:flex; align-items:center; gap:10px;
 }
 .ps-card-icon {
-    width: 42px; height: 42px;
-    border-radius: 12px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 1.15rem; color: #fff;
-    flex-shrink: 0;
+    width:38px; height:38px; border-radius:11px;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1rem; color:#fff; flex-shrink:0;
 }
-.ps-card-icon.blue   { background: linear-gradient(135deg,#3b82f6,#2563eb); box-shadow: 0 6px 14px rgba(37,99,235,.25); }
-.ps-card-icon.green  { background: linear-gradient(135deg,#34d399,#059669); box-shadow: 0 6px 14px rgba(5,150,105,.25); }
-.ps-card-icon.purple { background: linear-gradient(135deg,#a78bfa,#7c3aed); box-shadow: 0 6px 14px rgba(124,58,237,.25); }
-.ps-card-title { font-size: .95rem; font-weight: 800; color: var(--c-dark); margin: 0; line-height: 1.2; }
-.ps-card-sub   { font-size: .73rem; color: var(--c-muted); margin: 2px 0 0; }
-.ps-card-body  { padding: 22px; }
+.ps-card-icon.blue   { background:linear-gradient(135deg,#3b82f6,#2563eb); box-shadow:0 5px 12px rgba(37,99,235,.25); }
+.ps-card-icon.green  { background:linear-gradient(135deg,#34d399,#059669); box-shadow:0 5px 12px rgba(5,150,105,.25); }
+.ps-card-icon.orange { background:linear-gradient(135deg,#fb923c,#ea580c); box-shadow:0 5px 12px rgba(234,88,12,.25); }
+.ps-card-title { font-size:.9rem; font-weight:800; color:var(--c-dark); margin:0; }
+.ps-card-sub   { font-size:.72rem; color:var(--c-muted); margin:2px 0 0; }
+.ps-card-body  { padding:18px 20px; }
 
-/* ─── Form Labels ─── */
+/* ── Labels & inputs ── */
 .ps-label {
-    display: block;
-    font-size: .7rem;
-    font-weight: 800;
-    color: #475569;
-    text-transform: uppercase;
-    letter-spacing: .08em;
-    margin-bottom: 8px;
+    display:block; font-size:.68rem; font-weight:800;
+    color:#475569; text-transform:uppercase; letter-spacing:.08em; margin-bottom:7px;
 }
-
-/* ─── Select ─── */
-.ps-select {
-    width: 100%;
-    min-height: 46px;
-    border: 1.5px solid var(--c-border);
-    border-radius: var(--radius-md);
-    font-size: .88rem;
-    padding: 10px 38px 10px 14px;
-    background: #f8fafc;
-    color: var(--c-dark);
-    transition: all .2s;
-    outline: none;
-    appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 13px center;
-    cursor: pointer;
+.ps-select, .ps-input {
+    width:100%; min-height:42px; border:1.5px solid var(--c-border);
+    border-radius:var(--r-md); font-size:.86rem; padding:9px 36px 9px 13px;
+    background:#f8fafc; color:var(--c-dark); outline:none;
+    appearance:none; transition:all .2s; font-family:inherit;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='13' height='13' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 12px center; cursor:pointer;
 }
-.ps-select:focus { border-color: var(--c-blue); background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+.ps-input { padding:9px 13px; background-image:none; cursor:text; }
+.ps-select:focus, .ps-input:focus { border-color:var(--c-blue); background:#fff; box-shadow:0 0 0 3px rgba(37,99,235,.1); }
+.ps-field { margin-bottom:16px; }
+.ps-field:last-child { margin-bottom:0; }
+.ps-divider { height:1px; background:var(--c-border); margin:14px 0; }
+</style>
 
-/* ─── Color Swatches ─── */
-.ps-swatches { display: flex; flex-wrap: wrap; gap: 7px; }
-.ps-swatch-label { cursor: pointer; position: relative; }
-.ps-swatch-label input { position: absolute; opacity: 0; width: 0; height: 0; }
+<style>
+/* ── Color swatches ── */
+.ps-swatches { display:flex; flex-wrap:wrap; gap:6px; }
+.ps-swatch-label { cursor:pointer; position:relative; }
+.ps-swatch-label input { position:absolute; opacity:0; width:0; height:0; }
 .ps-swatch {
-    width: 26px; height: 26px;
-    border-radius: 7px;
-    display: block;
-    border: 2.5px solid transparent;
-    transition: all .15s;
-    box-shadow: 0 2px 5px rgba(15,23,42,.12);
+    width:24px; height:24px; border-radius:6px; display:block;
+    border:2.5px solid transparent; transition:all .15s;
+    box-shadow:0 2px 5px rgba(15,23,42,.12);
 }
-.ps-swatch-label input:checked + .ps-swatch {
-    border-color: #0f172a;
-    transform: scale(1.2);
-    box-shadow: 0 4px 12px rgba(15,23,42,.3);
-}
-.ps-swatch:hover { transform: scale(1.12); }
+.ps-swatch-label input:checked + .ps-swatch { border-color:#0f172a; transform:scale(1.2); box-shadow:0 4px 12px rgba(15,23,42,.3); }
+.ps-swatch:hover { transform:scale(1.1); }
 
-/* ─── Logo Upload ─── */
+/* ── Logo upload ── */
 .ps-upload {
-    position: relative;
-    border: 2px dashed var(--c-border);
-    border-radius: var(--radius-md);
-    padding: 20px 16px;
-    text-align: center;
-    background: #f8fafc;
-    cursor: pointer;
-    transition: all .2s;
-    overflow: hidden;
+    position:relative; border:2px dashed var(--c-border); border-radius:var(--r-md);
+    padding:16px; text-align:center; background:#f8fafc; cursor:pointer; transition:all .2s; overflow:hidden;
 }
-.ps-upload:hover { border-color: var(--c-blue); background: var(--c-blue-lt); }
-.ps-upload input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
-.ps-upload-icon { font-size: 1.6rem; color: #94a3b8; display: block; margin-bottom: 6px; }
-.ps-upload-text { font-size: .78rem; color: var(--c-muted); font-weight: 600; }
-.ps-upload-hint { font-size: .68rem; color: #94a3b8; margin-top: 3px; }
-.ps-logo-preview { width: 90px; height: 45px; object-fit: contain; border-radius: 8px; margin-top: 12px; display: none; border: 1px solid var(--c-border); padding: 4px; }
-
-/* ─── Current Logo Badge ─── */
+.ps-upload:hover { border-color:var(--c-blue); background:var(--c-blue-lt); }
+.ps-upload input[type="file"] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.ps-upload-icon { font-size:1.4rem; color:#94a3b8; display:block; margin-bottom:4px; }
+.ps-upload-text { font-size:.76rem; color:var(--c-muted); font-weight:600; }
+.ps-upload-hint { font-size:.66rem; color:#94a3b8; margin-top:2px; }
+.ps-logo-preview { width:80px; height:38px; object-fit:contain; border-radius:6px; margin-top:10px; display:none; border:1px solid var(--c-border); padding:3px; }
 .ps-current-logo {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 12px;
-    background: #f0fdf4;
-    border: 1px solid #bbf7d0;
-    border-radius: 10px;
-    margin-bottom: 10px;
+    display:flex; align-items:center; gap:8px; padding:8px 10px;
+    background:#f0fdf4; border:1px solid #bbf7d0; border-radius:9px; margin-bottom:8px;
 }
-.ps-current-logo img { height: 34px; width: auto; object-fit: contain; border-radius: 6px; }
-.ps-current-logo span { font-size: .73rem; color: var(--c-green); font-weight: 700; }
+.ps-current-logo img { height:30px; width:auto; object-fit:contain; border-radius:5px; }
+.ps-current-logo span { font-size:.7rem; color:var(--c-green); font-weight:700; }
 
-/* ─── Save Button ─── */
+/* ── Save button ── */
 .ps-btn {
-    width: 100%;
-    min-height: 46px;
-    border-radius: var(--radius-md);
-    font-weight: 800;
-    font-size: .88rem;
-    border: 0;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 8px;
-    transition: all .2s;
-    margin-top: 22px;
-    letter-spacing: .02em;
+    width:100%; min-height:44px; border-radius:var(--r-md); font-weight:800;
+    font-size:.86rem; border:0; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; gap:7px;
+    transition:all .2s; margin-top:18px; letter-spacing:.02em;
 }
-.ps-btn.blue   { background: linear-gradient(135deg,#3b82f6,#2563eb); color: #fff; box-shadow: 0 8px 20px rgba(37,99,235,.25); }
-.ps-btn.green  { background: linear-gradient(135deg,#34d399,#059669); color: #fff; box-shadow: 0 8px 20px rgba(5,150,105,.25); }
-.ps-btn.purple { background: linear-gradient(135deg,#a78bfa,#7c3aed); color: #fff; box-shadow: 0 8px 20px rgba(124,58,237,.25); }
-.ps-btn:hover  { filter: brightness(1.06); transform: translateY(-1px); }
-.ps-btn:active { transform: translateY(0); }
+.ps-btn.green { background:linear-gradient(135deg,#34d399,#059669); color:#fff; box-shadow:0 8px 20px rgba(5,150,105,.25); }
+.ps-btn:hover { filter:brightness(1.06); transform:translateY(-1px); }
 
-/* ─── Preview Card ─── */
+/* ── Party selector card ── */
+.ps-party-type-row {
+    display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:14px;
+}
+.ps-party-btn {
+    padding:10px 6px; border-radius:10px; border:2px solid var(--c-border);
+    background:#fff; cursor:pointer; text-align:center; transition:all .18s;
+    font-size:.78rem; font-weight:700; color:var(--c-muted);
+    display:flex; flex-direction:column; align-items:center; gap:4px;
+}
+.ps-party-btn i { font-size:1.1rem; }
+.ps-party-btn:hover { border-color:#93c5fd; color:var(--c-blue); background:#f0f9ff; }
+.ps-party-btn.active-agent  { border-color:#f59e0b; color:#b45309; background:#fffbeb; }
+.ps-party-btn.active-client { border-color:#3b82f6; color:#1d4ed8; background:#eff6ff; }
+.ps-party-btn.active-vendor { border-color:#a78bfa; color:#6d28d9; background:#f5f3ff; }
+
+/* ── Party info card ── */
+.ps-party-info {
+    display:none; padding:12px 14px; border-radius:12px;
+    background:linear-gradient(135deg,#f0fdf4,#dcfce7);
+    border:1px solid #bbf7d0; margin-top:12px;
+    display:flex; align-items:center; gap:12px;
+}
+.ps-party-avatar {
+    width:40px; height:40px; border-radius:10px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.1rem; font-weight:800; color:#fff;
+}
+.ps-party-avatar.agent  { background:linear-gradient(135deg,#fb923c,#ea580c); }
+.ps-party-avatar.client { background:linear-gradient(135deg,#3b82f6,#2563eb); }
+.ps-party-avatar.vendor { background:linear-gradient(135deg,#a78bfa,#7c3aed); }
+.ps-party-name  { font-size:.88rem; font-weight:800; color:var(--c-dark); }
+.ps-party-email { font-size:.74rem; color:var(--c-muted); margin-top:1px; }
+.ps-party-addr  { font-size:.72rem; color:#94a3b8; margin-top:2px; font-style:italic; }
+.ps-party-badge {
+    margin-left:auto; padding:3px 10px; border-radius:20px;
+    font-size:.68rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em; flex-shrink:0;
+}
+.ps-party-badge.agent  { background:#fef3c7; color:#92400e; }
+.ps-party-badge.client { background:#dbeafe; color:#1d4ed8; }
+.ps-party-badge.vendor { background:#ede9fe; color:#6d28d9; }
+
+/* ── Preview panel ── */
 .ps-preview {
-    background: var(--c-white);
-    border: 1px solid var(--c-border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    overflow: hidden;
+    background:var(--c-white); border:1px solid var(--c-border);
+    border-radius:var(--r-lg); box-shadow:var(--sh-md); overflow:hidden;
+    position:sticky; top:20px;
 }
 .ps-preview-bar {
-    padding: 12px 18px;
-    border-bottom: 1px solid var(--c-border);
-    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-    display: flex; align-items: center; gap: 7px;
+    padding:11px 16px; border-bottom:1px solid var(--c-border);
+    background:linear-gradient(135deg,#f8fafc,#f1f5f9);
+    display:flex; align-items:center; gap:6px;
 }
-.ps-dot { width: 11px; height: 11px; border-radius: 50%; }
-.ps-preview-label { font-size: .75rem; color: var(--c-muted); font-weight: 700; margin-left: 6px; }
-.ps-iframe { width: 100%; height: 700px; border: 0; display: block; background: #f8fafc; }
+.ps-dot { width:10px; height:10px; border-radius:50%; }
+.ps-preview-label { font-size:.73rem; color:var(--c-muted); font-weight:700; margin-left:6px; }
+.ps-iframe { width:100%; height:720px; border:0; display:block; background:#f8fafc; }
 
-/* ─── Divider ─── */
-.ps-divider { height: 1px; background: var(--c-border); margin: 18px 0; }
-
-/* ─── Quick Launcher ─── */
-.ql-step-label {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: .8rem;
-    font-weight: 800;
-    color: #475569;
-    text-transform: uppercase;
-    letter-spacing: .07em;
-    margin-bottom: 12px;
+/* ── Company info collapsible ── */
+.ps-collapse-head {
+    padding:14px 20px; border-bottom:1px solid var(--c-border);
+    background:linear-gradient(135deg,#f8fafc,#f1f5f9);
+    display:flex; align-items:center; justify-content:space-between;
+    cursor:pointer; user-select:none;
 }
-.ql-step-num {
-    width: 22px; height: 22px;
-    border-radius: 50%;
-    background: linear-gradient(135deg,#3b82f6,#2563eb);
-    color: #fff;
-    font-size: .72rem;
-    font-weight: 800;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-}
-.ql-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
-
-/* Client preview card */
-.ql-client-card {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 14px 18px;
-    background: linear-gradient(135deg,#f0fdf4,#dcfce7);
-    border: 1px solid #bbf7d0;
-    border-radius: 14px;
-}
-.ql-client-avatar {
-    width: 44px; height: 44px;
-    border-radius: 12px;
-    background: linear-gradient(135deg,#3b82f6,#2563eb);
-    color: #fff;
-    font-size: 1.2rem;
-    font-weight: 800;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
-}
-.ql-badge {
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: .7rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    flex-shrink: 0;
-}
-.ql-badge-customer { background: #dbeafe; color: #1d4ed8; }
-.ql-badge-vendor   { background: #ede9fe; color: #6d28d9; }
-
-/* Document type cards */
-.ql-doc-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 12px;
-    margin-bottom: 4px;
-}
-@media (max-width: 700px) { .ql-doc-grid { grid-template-columns: 1fr; } }
-.ql-doc-card {
-    position: relative;
-    border: 2px solid var(--c-border);
-    border-radius: 14px;
-    padding: 18px 16px;
-    cursor: pointer;
-    transition: all .18s;
-    background: #fff;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    overflow: hidden;
-}
-.ql-doc-card:hover { border-color: #93c5fd; background: #f0f9ff; }
-.ql-doc-card.selected { border-color: #2563eb; background: #eff6ff; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
-.ql-doc-card.disabled { opacity: .4; pointer-events: none; }
-.ql-doc-radio { position: absolute; opacity: 0; width: 0; height: 0; }
-.ql-doc-icon {
-    width: 38px; height: 38px;
-    border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    color: #fff;
-    font-size: 1.1rem;
-    margin-bottom: 4px;
-}
-.ql-doc-name { font-size: .9rem; font-weight: 800; color: #0f172a; }
-.ql-doc-desc { font-size: .75rem; color: #64748b; line-height: 1.4; }
-.ql-doc-check {
-    position: absolute;
-    top: 10px; right: 10px;
-    font-size: 1.1rem;
-    color: #2563eb;
-    display: none;
-}
-.ql-doc-card.selected .ql-doc-check { display: block; }
-
-/* Summary + Launch */
-.ql-summary {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 14px;
-    padding: 10px 14px;
-    background: #f0f9ff;
-    border: 1px solid #bae6fd;
-    border-radius: 10px;
-}
-.ql-launch-btn {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 14px 22px;
-    border-radius: 14px;
-    font-size: .95rem;
-    font-weight: 800;
-    color: #fff;
-    background: linear-gradient(135deg,#10b981,#059669);
-    box-shadow: 0 8px 24px rgba(5,150,105,.28);
-    text-decoration: none;
-    transition: all .2s;
-    border: none;
-    cursor: pointer;
-}
-.ql-launch-btn:hover { filter: brightness(1.06); transform: translateY(-1px); color: #fff; text-decoration: none; }
-.ql-launch-btn i { font-size: 1.1rem; }
-
-/* ─── Section spacing ─── */
-.ps-field { margin-bottom: 20px; }
-.ps-field:last-child { margin-bottom: 0; }
-
-/* ─── Company Info Card ─── */
-.ps-company-card {
-    background: var(--c-white);
-    border: 1px solid var(--c-border);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-md);
-    overflow: hidden;
-    margin-bottom: 20px;
-}
-.ps-company-head {
-    padding: 16px 22px;
-    border-bottom: 1px solid var(--c-border);
-    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    cursor: pointer;
-    user-select: none;
-}
-.ps-company-head-left { display: flex; align-items: center; gap: 12px; }
-.ps-company-toggle-icon { transition: transform .2s; font-size: .85rem; color: var(--c-muted); }
-.ps-company-toggle-icon.open { transform: rotate(180deg); }
-.ps-company-body { padding: 22px; display: none; }
-.ps-company-body.open { display: block; }
-.ps-input {
-    width: 100%;
-    min-height: 42px;
-    border: 1.5px solid var(--c-border);
-    border-radius: var(--radius-md);
-    font-size: .88rem;
-    padding: 9px 13px;
-    background: #f8fafc;
-    color: var(--c-dark);
-    transition: all .2s;
-    outline: none;
-    font-family: inherit;
-}
-.ps-input:focus { border-color: var(--c-blue); background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
-.ps-input-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 14px;
-}
-@media (max-width: 600px) { .ps-input-grid { grid-template-columns: 1fr; } }
-.ps-toggle-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 0;
-}
-.ps-toggle-row label { font-size: .84rem; font-weight: 600; color: var(--c-dark); cursor: pointer; }
-.ps-switch { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
-.ps-switch input { opacity: 0; width: 0; height: 0; }
-.ps-slider {
-    position: absolute; inset: 0;
-    background: #cbd5e1; border-radius: 22px;
-    cursor: pointer; transition: .2s;
-}
-.ps-slider:before {
-    content: ''; position: absolute;
-    width: 16px; height: 16px; border-radius: 50%;
-    background: white; left: 3px; top: 3px;
-    transition: .2s; box-shadow: 0 1px 4px rgba(0,0,0,.2);
-}
-.ps-switch input:checked + .ps-slider { background: var(--c-blue); }
-.ps-switch input:checked + .ps-slider:before { transform: translateX(18px); }
+.ps-collapse-head-left { display:flex; align-items:center; gap:10px; }
+.ps-chevron { transition:transform .2s; font-size:.82rem; color:var(--c-muted); }
+.ps-chevron.open { transform:rotate(180deg); }
+.ps-collapse-body { padding:18px 20px; display:none; }
+.ps-collapse-body.open { display:block; }
+.ps-input-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+@media(max-width:600px){ .ps-input-grid{ grid-template-columns:1fr; } }
 .ps-save-sm {
-    display: inline-flex; align-items: center; gap: 7px;
-    padding: 10px 22px;
-    border-radius: var(--radius-md);
-    font-weight: 700; font-size: .85rem;
-    border: 0; cursor: pointer;
-    background: linear-gradient(135deg,#3b82f6,#2563eb);
-    color: #fff;
-    box-shadow: 0 6px 16px rgba(37,99,235,.22);
-    transition: all .2s;
-    margin-top: 18px;
+    display:inline-flex; align-items:center; gap:6px; padding:9px 20px;
+    border-radius:var(--r-md); font-weight:700; font-size:.83rem;
+    border:0; cursor:pointer; background:linear-gradient(135deg,#3b82f6,#2563eb);
+    color:#fff; box-shadow:0 6px 16px rgba(37,99,235,.22); transition:all .2s; margin-top:16px;
 }
-.ps-save-sm:hover { filter: brightness(1.06); transform: translateY(-1px); }
+.ps-save-sm:hover { filter:brightness(1.06); transform:translateY(-1px); }
+.ps-toggle-row { display:flex; align-items:center; gap:10px; padding:8px 0; }
+.ps-toggle-row label { font-size:.82rem; font-weight:600; color:var(--c-dark); cursor:pointer; }
+.ps-switch { position:relative; display:inline-block; width:38px; height:21px; flex-shrink:0; }
+.ps-switch input { opacity:0; width:0; height:0; }
+.ps-slider { position:absolute; inset:0; background:#cbd5e1; border-radius:21px; cursor:pointer; transition:.2s; }
+.ps-slider:before { content:''; position:absolute; width:15px; height:15px; border-radius:50%; background:#fff; left:3px; top:3px; transition:.2s; box-shadow:0 1px 4px rgba(0,0,0,.2); }
+.ps-switch input:checked + .ps-slider { background:var(--c-blue); }
+.ps-switch input:checked + .ps-slider:before { transform:translateX(17px); }
 </style>
 
 <div class="ps-page">
+<div class="ps-main-grid">
 
-    {{-- ══════════════════════════════════════════════════════════════ --}}
-    {{-- COMPANY INFO CARD (collapsible) --}}
-    {{-- ══════════════════════════════════════════════════════════════ --}}
-    <div class="ps-company-card">
-        <div class="ps-company-head" onclick="toggleSection('companyInfoBody', this)">
-            <div class="ps-company-head-left">
-                <div class="ps-card-icon blue" style="width:36px;height:36px;font-size:.95rem;">
-                    <i class="ti ti-building"></i>
-                </div>
-                <div>
-                    <p class="ps-card-title">{{ __('Company Info') }}</p>
-                    <p class="ps-card-sub">{{ __('Address & details shown on all print documents') }}</p>
+{{-- ════════════════════════════════════════ --}}
+{{-- LEFT PANEL --}}
+{{-- ════════════════════════════════════════ --}}
+<div class="ps-left">
+
+    {{-- ── 1. Party Selector ── --}}
+    <div class="ps-card">
+        <div class="ps-card-head">
+            <div class="ps-card-icon orange"><i class="ti ti-users"></i></div>
+            <div>
+                <p class="ps-card-title">{{ __('Select Party') }}</p>
+                <p class="ps-card-sub">{{ __('Preview invoice for Agent, Client or Vendor') }}</p>
+            </div>
+        </div>
+        <div class="ps-card-body">
+
+            {{-- Type buttons --}}
+            <div class="ps-party-type-row">
+                <button type="button" class="ps-party-btn active-agent" id="btn_agent"
+                    onclick="setPartyType('agent')">
+                    <i class="ti ti-user-star"></i> {{ __('Agent') }}
+                </button>
+                <button type="button" class="ps-party-btn" id="btn_client"
+                    onclick="setPartyType('client')">
+                    <i class="ti ti-user-circle"></i> {{ __('Client') }}
+                </button>
+                <button type="button" class="ps-party-btn" id="btn_vendor"
+                    onclick="setPartyType('vendor')">
+                    <i class="ti ti-building-store"></i> {{ __('Vendor') }}
+                </button>
+            </div>
+
+            {{-- Dropdown --}}
+            <div class="ps-field">
+                <label class="ps-label" id="ps_party_label">{{ __('Select Agent') }}</label>
+                <select id="ps_party_type" style="display:none;"></select>
+                <select id="ps_party_id" class="ps-select" onchange="onPartySelect(this.value)">
+                    <option value="">— {{ __('Select Agent') }} —</option>
+                    @foreach($agents as $a)
+                        <option value="{{ $a['id'] }}">{{ $a['name'] }}@if($a['email']) · {{ $a['email'] }}@endif</option>
+                    @endforeach
+                </select>
+            </div>
+
+            {{-- Party info preview --}}
+            <div id="ps_party_info" style="display:none;padding:12px 14px;border-radius:12px;border:1px solid #bbf7d0;background:linear-gradient(135deg,#f0fdf4,#dcfce7);margin-top:4px;">
+                <div style="display:flex;align-items:center;gap:12px;">
+                    <div class="ps-party-avatar agent" id="ps_party_avatar">A</div>
+                    <div style="flex:1;min-width:0;">
+                        <div class="ps-party-name" id="ps_party_name">—</div>
+                        <div class="ps-party-email" id="ps_party_email">—</div>
+                        <div class="ps-party-addr" id="ps_party_addr"></div>
+                    </div>
+                    <span class="ps-party-badge agent" id="ps_party_badge">{{ __('Agent') }}</span>
                 </div>
             </div>
-            <i class="ti ti-chevron-down ps-company-toggle-icon"></i>
+
         </div>
-        <div class="ps-company-body" id="companyInfoBody">
-            <form method="post" action="{{ route('company.settings') }}" enctype="multipart/form-data">
+    </div>
+
+    {{-- ── 2. Invoice Template Settings ── --}}
+    <div class="ps-card">
+        <div class="ps-card-head">
+            <div class="ps-card-icon green"><i class="ti ti-file-invoice"></i></div>
+            <div>
+                <p class="ps-card-title">{{ __('Invoice Settings') }}</p>
+                <p class="ps-card-sub">{{ __('Template & branding') }}</p>
+            </div>
+        </div>
+        <div class="ps-card-body">
+            <form method="post" action="{{ route('template.setting') }}" enctype="multipart/form-data">
                 @csrf
-
                 <div class="ps-field">
-                    <label class="ps-label">{{ __('Company Name') }}</label>
-                    <input type="text" name="company_name" class="ps-input"
-                        value="{{ $settings['company_name'] ?? '' }}"
-                        placeholder="{{ __('Your Company Name') }}" required>
+                    <label class="ps-label">{{ __('Template') }}</label>
+                    <select class="ps-select" name="invoice_template" onchange="refreshPreview()">
+                        @foreach(App\Models\Utility::templateData()['templates'] as $key => $template)
+                            <option value="{{ $key }}" {{ (isset($settings['invoice_template']) && $settings['invoice_template'] == $key) ? 'selected' : '' }}>{{ $template }}</option>
+                        @endforeach
+                    </select>
                 </div>
-
-                <div class="ps-field">
-                    <label class="ps-label">{{ __('Email Address') }}</label>
-                    <input type="email" name="mail_from_address" class="ps-input"
-                        value="{{ $settings['mail_from_address'] ?? '' }}"
-                        placeholder="info@company.com">
-                </div>
-
-                <div class="ps-field">
-                    <label class="ps-label">{{ __('Phone / Telephone') }}</label>
-                    <input type="text" name="company_telephone" class="ps-input"
-                        value="{{ $settings['company_telephone'] ?? '' }}"
-                        placeholder="+1 234 567 8900">
-                </div>
-
-                <div class="ps-field">
-                    <label class="ps-label">{{ __('Street Address') }}</label>
-                    <input type="text" name="company_address" class="ps-input"
-                        value="{{ $settings['company_address'] ?? '' }}"
-                        placeholder="{{ __('Street address') }}">
-                </div>
-
-                <div class="ps-input-grid ps-field">
-                    <div>
-                        <label class="ps-label">{{ __('City') }}</label>
-                        <input type="text" name="company_city" class="ps-input"
-                            value="{{ $settings['company_city'] ?? '' }}"
-                            placeholder="{{ __('City') }}">
-                    </div>
-                    <div>
-                        <label class="ps-label">{{ __('State / Province') }}</label>
-                        <input type="text" name="company_state" class="ps-input"
-                            value="{{ $settings['company_state'] ?? '' }}"
-                            placeholder="{{ __('State') }}">
-                    </div>
-                    <div>
-                        <label class="ps-label">{{ __('ZIP / Postal Code') }}</label>
-                        <input type="text" name="company_zipcode" class="ps-input"
-                            value="{{ $settings['company_zipcode'] ?? '' }}"
-                            placeholder="10001">
-                    </div>
-                    <div>
-                        <label class="ps-label">{{ __('Country') }}</label>
-                        <input type="text" name="company_country" class="ps-input"
-                            value="{{ $settings['company_country'] ?? '' }}"
-                            placeholder="{{ __('Country') }}">
-                    </div>
-                </div>
-
                 <div class="ps-divider"></div>
-
                 <div class="ps-field">
-                    <label class="ps-label">{{ __('Registration Number') }}</label>
-                    <input type="text" name="registration_number" class="ps-input"
-                        value="{{ $settings['registration_number'] ?? '' }}"
-                        placeholder="{{ __('Business registration number') }}">
+                    <label class="ps-label">{{ __('Color Theme') }}</label>
+                    <div class="ps-swatches">
+                        @foreach(App\Models\Utility::templateData()['colors'] as $key => $color)
+                            <label class="ps-swatch-label">
+                                <input name="invoice_color" type="radio" value="{{ $color }}"
+                                    {{ (isset($settings['invoice_color']) && $settings['invoice_color'] == $color) ? 'checked' : '' }}>
+                                <span class="ps-swatch" style="background:#{{ $color }}"></span>
+                            </label>
+                        @endforeach
+                    </div>
                 </div>
-
-                {{-- VAT / GST Toggle --}}
-                <div class="ps-toggle-row ps-field">
-                    <label class="ps-switch">
-                        <input type="checkbox" name="vat_gst_number_switch" value="on"
-                            {{ (isset($settings['vat_gst_number_switch']) && $settings['vat_gst_number_switch'] == 'on') ? 'checked' : '' }}
-                            onchange="toggleVat(this)">
-                        <span class="ps-slider"></span>
+                <div class="ps-divider"></div>
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Invoice Logo') }}</label>
+                    @php $cur_invoice_logo = \App\Models\Utility::getValByName('invoice_logo'); @endphp
+                    @if(!empty($cur_invoice_logo))
+                        <div class="ps-current-logo">
+                            <img src="{{ \App\Models\Utility::get_file('invoice_logo/') . $cur_invoice_logo }}" alt="Logo">
+                            <span>✓ {{ __('Current logo active') }}</span>
+                        </div>
+                    @endif
+                    <label class="ps-upload" for="invoice_logo">
+                        <i class="ti ti-cloud-upload ps-upload-icon"></i>
+                        <span class="ps-upload-text">{{ __('Click to upload new logo') }}</span>
+                        <span class="ps-upload-hint">PNG, JPG — max 20MB</span>
+                        <input type="file" name="invoice_logo" id="invoice_logo" accept="image/*">
                     </label>
-                    <label>{{ __('Show VAT / GST Number on documents') }}</label>
+                    <img id="invoice_image" class="ps-logo-preview" src="" alt="Logo Preview">
                 </div>
-
-                <div id="vat-fields" style="{{ (isset($settings['vat_gst_number_switch']) && $settings['vat_gst_number_switch'] == 'on') ? '' : 'display:none;' }}">
-                    <div class="ps-input-grid ps-field">
-                        <div>
-                            <label class="ps-label">{{ __('Tax Type') }} <small style="text-transform:none;font-weight:500;">(e.g. VAT, GST)</small></label>
-                            <input type="text" name="tax_type" class="ps-input"
-                                value="{{ $settings['tax_type'] ?? '' }}"
-                                placeholder="VAT">
-                        </div>
-                        <div>
-                            <label class="ps-label">{{ __('VAT / GST Number') }}</label>
-                            <input type="text" name="vat_number" class="ps-input"
-                                value="{{ $settings['vat_number'] ?? '' }}"
-                                placeholder="GB123456789">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="ps-divider"></div>
-
-                <div class="ps-field">
-                    <label class="ps-label">{{ __('Footer Title') }}</label>
-                    <input type="text" name="footer_title" class="ps-input"
-                        value="{{ $settings['footer_title'] ?? '' }}"
-                        placeholder="{{ __('e.g. Thank you for your business!') }}">
-                </div>
-
-                <div class="ps-field">
-                    <label class="ps-label">{{ __('Footer Notes') }}</label>
-                    <textarea name="footer_notes" class="ps-input" rows="3"
-                        placeholder="{{ __('Payment terms, bank details, or any notes...') }}" style="height:auto;resize:vertical;">{{ $settings['footer_notes'] ?? '' }}</textarea>
-                </div>
-
-                <button type="submit" class="ps-save-sm">
-                    <i class="ti ti-device-floppy"></i> {{ __('Save Company Info') }}
+                <button type="submit" class="ps-btn green">
+                    <i class="ti ti-device-floppy"></i> {{ __('Save Changes') }}
                 </button>
             </form>
         </div>
     </div>
 
-    {{-- ══════════════════════════════════════════════════════════════ --}}
-    {{-- QUICK DOCUMENT LAUNCHER --}}
-    {{-- ══════════════════════════════════════════════════════════════ --}}
-    <div class="ps-company-card">
-        <div class="ps-company-head" onclick="toggleSection('launcherBody', this)">
-            <div class="ps-company-head-left">
-                <div class="ps-card-icon" style="width:36px;height:36px;font-size:.95rem;background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 6px 14px rgba(5,150,105,.25);">
-                    <i class="ti ti-rocket"></i>
-                </div>
+    {{-- ── 3. Company Info (collapsible) ── --}}
+    <div class="ps-card">
+        <div class="ps-collapse-head" onclick="toggleCollapse('companyBody',this)">
+            <div class="ps-collapse-head-left">
+                <div class="ps-card-icon blue" style="width:34px;height:34px;font-size:.9rem;"><i class="ti ti-building"></i></div>
                 <div>
-                    <p class="ps-card-title">{{ __('Create Document') }}</p>
-                    <p class="ps-card-sub">{{ __('Select client & document type to quickly create Invoice, Proposal or Bill') }}</p>
+                    <p class="ps-card-title">{{ __('Company Info') }}</p>
+                    <p class="ps-card-sub">{{ __('Address shown on all documents') }}</p>
                 </div>
             </div>
-            <i class="ti ti-chevron-down ps-company-toggle-icon"></i>
+            <i class="ti ti-chevron-down ps-chevron"></i>
         </div>
-        <div class="ps-company-body open" id="launcherBody">
-
-            {{-- Step 1: Client Type + Client Select --}}
-            <div class="ql-step-label">
-                <span class="ql-step-num">1</span>
-                {{ __('Who is this document for?') }}
-            </div>
-            <div class="ql-row" style="margin-bottom:20px;">
-                <div style="flex:0 0 160px;">
-                    <label class="ps-label">{{ __('Client Type') }}</label>
-                    <select id="ql_type" class="ps-select" onchange="qlUpdateClientList()">
-                        <option value="customer">{{ __('Customer') }}</option>
-                        <option value="vendor">{{ __('Vendor') }}</option>
-                    </select>
+        <div class="ps-collapse-body" id="companyBody">
+            <form method="post" action="{{ route('company.settings') }}" enctype="multipart/form-data">
+                @csrf
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Company Name') }}</label>
+                    <input type="text" name="company_name" class="ps-input" value="{{ $settings['company_name'] ?? '' }}" placeholder="{{ __('Company Name') }}" required>
                 </div>
-                <div style="flex:1;min-width:220px;">
-                    <label class="ps-label">{{ __('Select Client') }}</label>
-                    <select id="ql_client" class="ps-select" onchange="qlLoadClientInfo()">
-                        <option value="">— {{ __('Choose client') }} —</option>
-                        @foreach($customers as $c)
-                            <option value="{{ $c['id'] }}" data-type="customer">
-                                {{ $c['name'] }}@if($c['email']) · {{ $c['email'] }}@endif
-                            </option>
-                        @endforeach
-                    </select>
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Email') }}</label>
+                    <input type="email" name="mail_from_address" class="ps-input" value="{{ $settings['mail_from_address'] ?? '' }}" placeholder="info@company.com">
                 </div>
-            </div>
-
-            {{-- Client Info Preview (shown after selection) --}}
-            <div id="ql_client_preview" style="display:none;margin-bottom:20px;">
-                <div class="ql-client-card">
-                    <div class="ql-client-avatar" id="ql_avatar_letter">A</div>
-                    <div style="flex:1;">
-                        <div style="font-size:.95rem;font-weight:800;color:#0f172a;" id="ql_client_name">—</div>
-                        <div style="font-size:.78rem;color:#64748b;margin-top:2px;" id="ql_client_email">—</div>
-                        <div style="font-size:.78rem;color:#64748b;margin-top:1px;" id="ql_client_address">—</div>
-                    </div>
-                    <div id="ql_client_badge" class="ql-badge ql-badge-customer">{{ __('Customer') }}</div>
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Phone') }}</label>
+                    <input type="text" name="company_telephone" class="ps-input" value="{{ $settings['company_telephone'] ?? '' }}" placeholder="+1 234 567 8900">
                 </div>
-            </div>
-
-            {{-- Step 2: Document Type --}}
-            <div class="ql-step-label">
-                <span class="ql-step-num">2</span>
-                {{ __('What document do you want to create?') }}
-            </div>
-            <div class="ql-doc-grid" id="ql_doc_grid">
-                {{-- Invoice --}}
-                <label class="ql-doc-card" id="ql_card_invoice">
-                    <input type="radio" name="ql_doc_type" value="invoice" class="ql-doc-radio" onchange="qlDocSelect('invoice')">
-                    <div class="ql-doc-icon" style="background:linear-gradient(135deg,#34d399,#059669);">
-                        <i class="ti ti-file-invoice"></i>
-                    </div>
-                    <div class="ql-doc-name">{{ __('Invoice') }}</div>
-                    <div class="ql-doc-desc">{{ __('Bill a customer for products or services') }}</div>
-                    <div class="ql-doc-check"><i class="ti ti-circle-check-filled"></i></div>
-                </label>
-                {{-- Proposal --}}
-                <label class="ql-doc-card" id="ql_card_proposal">
-                    <input type="radio" name="ql_doc_type" value="proposal" class="ql-doc-radio" onchange="qlDocSelect('proposal')">
-                    <div class="ql-doc-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb);">
-                        <i class="ti ti-file-text"></i>
-                    </div>
-                    <div class="ql-doc-name">{{ __('Proposal') }}</div>
-                    <div class="ql-doc-desc">{{ __('Send a quote or proposal to a customer') }}</div>
-                    <div class="ql-doc-check"><i class="ti ti-circle-check-filled"></i></div>
-                </label>
-                {{-- Bill --}}
-                <label class="ql-doc-card" id="ql_card_bill">
-                    <input type="radio" name="ql_doc_type" value="bill" class="ql-doc-radio" onchange="qlDocSelect('bill')">
-                    <div class="ql-doc-icon" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);">
-                        <i class="ti ti-receipt"></i>
-                    </div>
-                    <div class="ql-doc-name">{{ __('Bill') }}</div>
-                    <div class="ql-doc-desc">{{ __('Record a purchase bill from a vendor') }}</div>
-                    <div class="ql-doc-check"><i class="ti ti-circle-check-filled"></i></div>
-                </label>
-            </div>
-
-            {{-- Vendor-only notice --}}
-            <div id="ql_vendor_notice" style="display:none;margin-top:10px;padding:10px 14px;background:#fef3c7;border:1px solid #fde68a;border-radius:10px;font-size:.8rem;color:#92400e;font-weight:600;">
-                <i class="ti ti-info-circle"></i> {{ __('Bills are for Vendors only. Invoices & Proposals are for Customers.') }}
-            </div>
-
-            {{-- Step 3: Launch Button --}}
-            <div id="ql_launch_wrap" style="display:none;margin-top:24px;padding-top:20px;border-top:1px solid #e2e8f0;">
-                <div class="ql-summary" id="ql_summary">
-                    <i class="ti ti-arrow-right-circle" style="font-size:1.1rem;color:#2563eb;"></i>
-                    <span id="ql_summary_text" style="font-size:.88rem;font-weight:700;color:#0f172a;"></span>
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Street Address') }}</label>
+                    <input type="text" name="company_address" class="ps-input" value="{{ $settings['company_address'] ?? '' }}" placeholder="{{ __('Street address') }}">
                 </div>
-                <a href="#" id="ql_launch_btn" class="ql-launch-btn" onclick="return qlLaunch()">
-                    <i class="ti ti-rocket"></i>
-                    <span id="ql_launch_label">{{ __('Create Document') }}</span>
-                    <i class="ti ti-arrow-right" style="margin-left:auto;"></i>
-                </a>
-            </div>
-
+                <div class="ps-input-grid ps-field">
+                    <div><label class="ps-label">{{ __('City') }}</label><input type="text" name="company_city" class="ps-input" value="{{ $settings['company_city'] ?? '' }}"></div>
+                    <div><label class="ps-label">{{ __('State') }}</label><input type="text" name="company_state" class="ps-input" value="{{ $settings['company_state'] ?? '' }}"></div>
+                    <div><label class="ps-label">{{ __('ZIP') }}</label><input type="text" name="company_zipcode" class="ps-input" value="{{ $settings['company_zipcode'] ?? '' }}"></div>
+                    <div><label class="ps-label">{{ __('Country') }}</label><input type="text" name="company_country" class="ps-input" value="{{ $settings['company_country'] ?? '' }}"></div>
+                </div>
+                <div class="ps-divider"></div>
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Registration Number') }}</label>
+                    <input type="text" name="registration_number" class="ps-input" value="{{ $settings['registration_number'] ?? '' }}">
+                </div>
+                <div class="ps-toggle-row ps-field">
+                    <label class="ps-switch">
+                        <input type="checkbox" name="vat_gst_number_switch" value="on"
+                            {{ (isset($settings['vat_gst_number_switch']) && $settings['vat_gst_number_switch'] == 'on') ? 'checked' : '' }}
+                            onchange="document.getElementById('vat-fields').style.display=this.checked?'block':'none'">
+                        <span class="ps-slider"></span>
+                    </label>
+                    <label>{{ __('Show VAT / GST Number') }}</label>
+                </div>
+                <div id="vat-fields" style="{{ (isset($settings['vat_gst_number_switch']) && $settings['vat_gst_number_switch'] == 'on') ? '' : 'display:none;' }}">
+                    <div class="ps-input-grid ps-field">
+                        <div><label class="ps-label">{{ __('Tax Type') }}</label><input type="text" name="tax_type" class="ps-input" value="{{ $settings['tax_type'] ?? '' }}" placeholder="VAT"></div>
+                        <div><label class="ps-label">{{ __('VAT / GST Number') }}</label><input type="text" name="vat_number" class="ps-input" value="{{ $settings['vat_number'] ?? '' }}"></div>
+                    </div>
+                </div>
+                <div class="ps-divider"></div>
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Footer Title') }}</label>
+                    <input type="text" name="footer_title" class="ps-input" value="{{ $settings['footer_title'] ?? '' }}" placeholder="{{ __('Thank you for your business!') }}">
+                </div>
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Footer Notes') }}</label>
+                    <textarea name="footer_notes" class="ps-input" rows="3" style="height:auto;resize:vertical;background-image:none;">{{ $settings['footer_notes'] ?? '' }}</textarea>
+                </div>
+                <button type="submit" class="ps-save-sm"><i class="ti ti-device-floppy"></i> {{ __('Save Company Info') }}</button>
+            </form>
         </div>
     </div>
 
-    {{-- ══════════════════════════════════════════════════════════════ --}}
-    {{-- RECIPIENT ADDRESS CARD (collapsible) --}}
-    {{-- ══════════════════════════════════════════════════════════════ --}}
-    <div class="ps-company-card">
-        <div class="ps-company-head" onclick="toggleSection('recipientBody', this)">
-            <div class="ps-company-head-left">
-                <div class="ps-card-icon" style="width:36px;height:36px;font-size:.95rem;background:linear-gradient(135deg,#f59e0b,#d97706);box-shadow:0 6px 14px rgba(217,119,6,.25);">
-                    <i class="ti ti-user-circle"></i>
-                </div>
-                <div>
-                    <p class="ps-card-title">{{ __('Recipient Address') }}</p>
-                    <p class="ps-card-sub">{{ __('Edit billing & shipping address of any customer or vendor') }}</p>
-                </div>
-            </div>
-            <i class="ti ti-chevron-down ps-company-toggle-icon"></i>
-        </div>
-        <div class="ps-company-body" id="recipientBody">
+</div>{{-- /ps-left --}}
 
-            {{-- Type + Search Row --}}
-            <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;align-items:flex-end;">
-                <div style="flex:0 0 160px;">
-                    <label class="ps-label">{{ __('Type') }}</label>
-                    <select id="recipientType" class="ps-select" onchange="clearRecipientForm()">
-                        <option value="customer">{{ __('Customer') }}</option>
-                        <option value="vendor">{{ __('Vendor') }}</option>
-                    </select>
-                </div>
-                <div style="flex:1;min-width:200px;">
-                    <label class="ps-label">{{ __('Select Customer / Vendor') }}</label>
-                    <select id="recipientSelect" class="ps-select" onchange="loadRecipient(this.value)">
-                        <option value="">— {{ __('Choose one') }} —</option>
-                        @foreach($customers as $c)
-                            <option value="{{ $c['id'] }}" data-type="customer">{{ $c['name'] }}@if($c['email']) ({{ $c['email'] }})@endif</option>
-                        @endforeach
-                    </select>
-                </div>
-            </div>
-
-            {{-- Address Form (hidden until a recipient is selected) --}}
-            <div id="recipientForm" style="display:none;">
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
-
-                    {{-- Billing --}}
-                    <div>
-                        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-                            <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#3b82f6,#2563eb);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;flex-shrink:0;">
-                                <i class="ti ti-map-pin"></i>
-                            </div>
-                            <span style="font-size:.82rem;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:.07em;">{{ __('Billing Address') }}</span>
-                        </div>
-                        <div class="ps-field">
-                            <label class="ps-label">{{ __('Full Name') }}</label>
-                            <input type="text" id="billing_name" class="ps-input" placeholder="{{ __('Recipient name') }}">
-                        </div>
-                        <div class="ps-field">
-                            <label class="ps-label">{{ __('Phone') }}</label>
-                            <input type="text" id="billing_phone" class="ps-input" placeholder="+1 234 567 8900">
-                        </div>
-                        <div class="ps-field">
-                            <label class="ps-label">{{ __('Street Address') }}</label>
-                            <textarea id="billing_address" class="ps-input" rows="2" style="height:auto;resize:vertical;" placeholder="{{ __('Street address') }}"></textarea>
-                        </div>
-                        <div class="ps-input-grid ps-field">
-                            <div>
-                                <label class="ps-label">{{ __('City') }}</label>
-                                <input type="text" id="billing_city" class="ps-input" placeholder="{{ __('City') }}">
-                            </div>
-                            <div>
-                                <label class="ps-label">{{ __('State') }}</label>
-                                <input type="text" id="billing_state" class="ps-input" placeholder="{{ __('State') }}">
-                            </div>
-                            <div>
-                                <label class="ps-label">{{ __('ZIP Code') }}</label>
-                                <input type="text" id="billing_zip" class="ps-input" placeholder="10001">
-                            </div>
-                            <div>
-                                <label class="ps-label">{{ __('Country') }}</label>
-                                <input type="text" id="billing_country" class="ps-input" placeholder="{{ __('Country') }}">
-                            </div>
-                        </div>
-                    </div>
-
-                    {{-- Shipping --}}
-                    <div>
-                        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-                            <div style="display:flex;align-items:center;gap:8px;">
-                                <div style="width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#34d399,#059669);display:flex;align-items:center;justify-content:center;color:#fff;font-size:.8rem;flex-shrink:0;">
-                                    <i class="ti ti-truck"></i>
-                                </div>
-                                <span style="font-size:.82rem;font-weight:800;color:#0f172a;text-transform:uppercase;letter-spacing:.07em;">{{ __('Shipping Address') }}</span>
-                            </div>
-                            <button type="button" onclick="copyBillingToShipping()" style="font-size:.72rem;font-weight:700;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:4px 10px;cursor:pointer;">
-                                <i class="ti ti-copy"></i> {{ __('Same as Billing') }}
-                            </button>
-                        </div>
-                        <div class="ps-field">
-                            <label class="ps-label">{{ __('Full Name') }}</label>
-                            <input type="text" id="shipping_name" class="ps-input" placeholder="{{ __('Recipient name') }}">
-                        </div>
-                        <div class="ps-field">
-                            <label class="ps-label">{{ __('Phone') }}</label>
-                            <input type="text" id="shipping_phone" class="ps-input" placeholder="+1 234 567 8900">
-                        </div>
-                        <div class="ps-field">
-                            <label class="ps-label">{{ __('Street Address') }}</label>
-                            <textarea id="shipping_address" class="ps-input" rows="2" style="height:auto;resize:vertical;" placeholder="{{ __('Street address') }}"></textarea>
-                        </div>
-                        <div class="ps-input-grid ps-field">
-                            <div>
-                                <label class="ps-label">{{ __('City') }}</label>
-                                <input type="text" id="shipping_city" class="ps-input" placeholder="{{ __('City') }}">
-                            </div>
-                            <div>
-                                <label class="ps-label">{{ __('State') }}</label>
-                                <input type="text" id="shipping_state" class="ps-input" placeholder="{{ __('State') }}">
-                            </div>
-                            <div>
-                                <label class="ps-label">{{ __('ZIP Code') }}</label>
-                                <input type="text" id="shipping_zip" class="ps-input" placeholder="10001">
-                            </div>
-                            <div>
-                                <label class="ps-label">{{ __('Country') }}</label>
-                                <input type="text" id="shipping_country" class="ps-input" placeholder="{{ __('Country') }}">
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-
-                {{-- Save Button --}}
-                <div style="margin-top:20px;display:flex;align-items:center;gap:12px;">
-                    <button type="button" onclick="saveRecipientAddress()" class="ps-save-sm" id="recipientSaveBtn">
-                        <i class="ti ti-device-floppy"></i> {{ __('Save Address') }}
-                    </button>
-                    <span id="recipientMsg" style="font-size:.82rem;font-weight:600;display:none;"></span>
-                </div>
-            </div>
-
-        </div>
+{{-- ════════════════════════════════════════ --}}
+{{-- RIGHT: LIVE PREVIEW --}}
+{{-- ════════════════════════════════════════ --}}
+<div class="ps-preview">
+    <div class="ps-preview-bar">
+        <span class="ps-dot" style="background:#ef4444;"></span>
+        <span class="ps-dot" style="background:#f59e0b;"></span>
+        <span class="ps-dot" style="background:#22c55e;"></span>
+        <span class="ps-preview-label">{{ __('Live Preview — Invoice') }}</span>
+        <span id="ps_preview_party_label" style="margin-left:auto;font-size:.72rem;font-weight:700;color:#2563eb;background:#eff6ff;padding:3px 10px;border-radius:20px;display:none;"></span>
     </div>
-
-    {{-- ── Tab Navigation ── --}}
-    <div class="ps-tabs" id="psTabNav">
-        <button class="ps-tab active" onclick="switchTab('proposal', this)">
-            <i class="ti ti-file-text"></i> {{ __('Proposal Print Setting') }}
-        </button>
-        <button class="ps-tab" onclick="switchTab('invoice', this)">
-            <i class="ti ti-file-invoice"></i> {{ __('Invoice Print Setting') }}
-        </button>
-        <button class="ps-tab" onclick="switchTab('bill', this)">
-            <i class="ti ti-receipt"></i> {{ __('Bill Print Setting') }}
-        </button>
-    </div>
-
-    {{-- ══════════════════════════════════════════════════════════════ --}}
-    {{-- PROPOSAL TAB --}}
-    {{-- ══════════════════════════════════════════════════════════════ --}}
-    <div class="ps-pane active" id="pane-proposal">
-        <div class="ps-grid">
-
-            {{-- Settings Panel --}}
-            <div class="ps-card">
-                <div class="ps-card-head">
-                    <div class="ps-card-icon blue"><i class="ti ti-file-text"></i></div>
-                    <div>
-                        <p class="ps-card-title">{{ __('Proposal Settings') }}</p>
-                        <p class="ps-card-sub">{{ __('Template & branding') }}</p>
-                    </div>
-                </div>
-                <div class="ps-card-body">
-                    <form method="post" action="{{ route('proposal.template.setting') }}" enctype="multipart/form-data">
-                        @csrf
-
-                        {{-- Template --}}
-                        <div class="ps-field">
-                            <label class="ps-label">{{ __('Template') }}</label>
-                            <select class="ps-select" name="proposal_template">
-                                @foreach(App\Models\Utility::templateData()['templates'] as $key => $template)
-                                    <option value="{{ $key }}" {{ (isset($settings['proposal_template']) && $settings['proposal_template'] == $key) ? 'selected' : '' }}>
-                                        {{ $template }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="ps-divider"></div>
-
-                        {{-- Color Theme --}}
-                        <div class="ps-field">
-                            <label class="ps-label">{{ __('Color Theme') }}</label>
-                            <div class="ps-swatches">
-                                @foreach(App\Models\Utility::templateData()['colors'] as $key => $color)
-                                    <label class="ps-swatch-label">
-                                        <input name="proposal_color" type="radio" value="{{ $color }}"
-                                            {{ (isset($settings['proposal_color']) && $settings['proposal_color'] == $color) ? 'checked' : '' }}>
-                                        <span class="ps-swatch" style="background:#{{ $color }}"></span>
-                                    </label>
-                                @endforeach
-                            </div>
-                        </div>
-
-                        <div class="ps-divider"></div>
-
-                        {{-- Logo --}}
-                        <div class="ps-field">
-                            <label class="ps-label">{{ __('Proposal Logo') }}</label>
-                            @php $cur_proposal_logo = \App\Models\Utility::getValByName('proposal_logo'); @endphp
-                            @if(!empty($cur_proposal_logo))
-                                <div class="ps-current-logo">
-                                    <img src="{{ \App\Models\Utility::get_file('proposal_logo/') . $cur_proposal_logo }}" alt="Current Logo">
-                                    <span>✓ {{ __('Current logo active') }}</span>
-                                </div>
-                            @endif
-                            <label class="ps-upload" for="proposal_logo">
-                                <i class="ti ti-cloud-upload ps-upload-icon"></i>
-                                <span class="ps-upload-text">{{ __('Click to upload new logo') }}</span>
-                                <span class="ps-upload-hint">PNG, JPG — max 20MB</span>
-                                <input type="file" name="proposal_logo" id="proposal_logo" accept="image/*">
-                            </label>
-                            <img id="proposal_image" class="ps-logo-preview" src="" alt="Logo Preview">
-                        </div>
-
-                        <button type="submit" class="ps-btn blue">
-                            <i class="ti ti-device-floppy"></i> {{ __('Save Changes') }}
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            {{-- Preview Panel --}}
-            <div class="ps-preview">
-                <div class="ps-preview-bar">
-                    <span class="ps-dot" style="background:#ef4444;"></span>
-                    <span class="ps-dot" style="background:#f59e0b;"></span>
-                    <span class="ps-dot" style="background:#22c55e;"></span>
-                    <span class="ps-preview-label">{{ __('Live Preview') }}</span>
-                </div>
-                @php
-                    $p_tpl   = $settings['proposal_template'] ?? 'template1';
-                    $p_color = $settings['proposal_color']    ?? 'ffffff';
-                @endphp
-                <iframe id="proposal_frame" class="ps-iframe"
-                    src="{{ route('proposal.preview', [$p_tpl, $p_color]) }}"></iframe>
-            </div>
-
-        </div>
-    </div>
-
-    {{-- ══════════════════════════════════════════════════════════════ --}}
-    {{-- INVOICE TAB --}}
-    {{-- ══════════════════════════════════════════════════════════════ --}}
-    <div class="ps-pane" id="pane-invoice">
-        <div class="ps-grid">
-
-            <div class="ps-card">
-                <div class="ps-card-head">
-                    <div class="ps-card-icon green"><i class="ti ti-file-invoice"></i></div>
-                    <div>
-                        <p class="ps-card-title">{{ __('Invoice Settings') }}</p>
-                        <p class="ps-card-sub">{{ __('Template & branding') }}</p>
-                    </div>
-                </div>
-                <div class="ps-card-body">
-                    <form method="post" action="{{ route('template.setting') }}" enctype="multipart/form-data">
-                        @csrf
-
-                        <div class="ps-field">
-                            <label class="ps-label">{{ __('Template') }}</label>
-                            <select class="ps-select" name="invoice_template">
-                                @foreach(App\Models\Utility::templateData()['templates'] as $key => $template)
-                                    <option value="{{ $key }}" {{ (isset($settings['invoice_template']) && $settings['invoice_template'] == $key) ? 'selected' : '' }}>
-                                        {{ $template }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="ps-divider"></div>
-
-                        <div class="ps-field">
-                            <label class="ps-label">{{ __('Color Theme') }}</label>
-                            <div class="ps-swatches">
-                                @foreach(App\Models\Utility::templateData()['colors'] as $key => $color)
-                                    <label class="ps-swatch-label">
-                                        <input name="invoice_color" type="radio" value="{{ $color }}"
-                                            {{ (isset($settings['invoice_color']) && $settings['invoice_color'] == $color) ? 'checked' : '' }}>
-                                        <span class="ps-swatch" style="background:#{{ $color }}"></span>
-                                    </label>
-                                @endforeach
-                            </div>
-                        </div>
-
-                        <div class="ps-divider"></div>
-
-                        <div class="ps-field">
-                            <label class="ps-label">{{ __('Invoice Logo') }}</label>
-                            @php $cur_invoice_logo = \App\Models\Utility::getValByName('invoice_logo'); @endphp
-                            @if(!empty($cur_invoice_logo))
-                                <div class="ps-current-logo">
-                                    <img src="{{ \App\Models\Utility::get_file('invoice_logo/') . $cur_invoice_logo }}" alt="Current Logo">
-                                    <span>✓ {{ __('Current logo active') }}</span>
-                                </div>
-                            @endif
-                            <label class="ps-upload" for="invoice_logo">
-                                <i class="ti ti-cloud-upload ps-upload-icon"></i>
-                                <span class="ps-upload-text">{{ __('Click to upload new logo') }}</span>
-                                <span class="ps-upload-hint">PNG, JPG — max 20MB</span>
-                                <input type="file" name="invoice_logo" id="invoice_logo" accept="image/*">
-                            </label>
-                            <img id="invoice_image" class="ps-logo-preview" src="" alt="Logo Preview">
-                        </div>
-
-                        <button type="submit" class="ps-btn green">
-                            <i class="ti ti-device-floppy"></i> {{ __('Save Changes') }}
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <div class="ps-preview">
-                <div class="ps-preview-bar">
-                    <span class="ps-dot" style="background:#ef4444;"></span>
-                    <span class="ps-dot" style="background:#f59e0b;"></span>
-                    <span class="ps-dot" style="background:#22c55e;"></span>
-                    <span class="ps-preview-label">{{ __('Live Preview') }}</span>
-                </div>
-                @php
-                    $i_tpl   = $settings['invoice_template'] ?? 'template1';
-                    $i_color = $settings['invoice_color']    ?? 'ffffff';
-                @endphp
-                <iframe id="invoice_frame" class="ps-iframe"
-                    src="{{ route('invoice.preview', [$i_tpl, $i_color]) }}"></iframe>
-            </div>
-
-        </div>
-    </div>
-
-    {{-- ══════════════════════════════════════════════════════════════ --}}
-    {{-- BILL TAB --}}
-    {{-- ══════════════════════════════════════════════════════════════ --}}
-    <div class="ps-pane" id="pane-bill">
-        <div class="ps-grid">
-
-            <div class="ps-card">
-                <div class="ps-card-head">
-                    <div class="ps-card-icon purple"><i class="ti ti-receipt"></i></div>
-                    <div>
-                        <p class="ps-card-title">{{ __('Bill Settings') }}</p>
-                        <p class="ps-card-sub">{{ __('Template & branding') }}</p>
-                    </div>
-                </div>
-                <div class="ps-card-body">
-                    <form method="post" action="{{ route('bill.template.setting') }}" enctype="multipart/form-data">
-                        @csrf
-
-                        <div class="ps-field">
-                            <label class="ps-label">{{ __('Template') }}</label>
-                            <select class="ps-select" name="bill_template">
-                                @foreach(App\Models\Utility::templateData()['templates'] as $key => $template)
-                                    <option value="{{ $key }}" {{ (isset($settings['bill_template']) && $settings['bill_template'] == $key) ? 'selected' : '' }}>
-                                        {{ $template }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <div class="ps-divider"></div>
-
-                        <div class="ps-field">
-                            <label class="ps-label">{{ __('Color Theme') }}</label>
-                            <div class="ps-swatches">
-                                @foreach(App\Models\Utility::templateData()['colors'] as $key => $color)
-                                    <label class="ps-swatch-label">
-                                        <input name="bill_color" type="radio" value="{{ $color }}"
-                                            {{ (isset($settings['bill_color']) && $settings['bill_color'] == $color) ? 'checked' : '' }}>
-                                        <span class="ps-swatch" style="background:#{{ $color }}"></span>
-                                    </label>
-                                @endforeach
-                            </div>
-                        </div>
-
-                        <div class="ps-divider"></div>
-
-                        <div class="ps-field">
-                            <label class="ps-label">{{ __('Bill Logo') }}</label>
-                            @php $cur_bill_logo = \App\Models\Utility::getValByName('bill_logo'); @endphp
-                            @if(!empty($cur_bill_logo))
-                                <div class="ps-current-logo">
-                                    <img src="{{ \App\Models\Utility::get_file('bill_logo/') . $cur_bill_logo }}" alt="Current Logo">
-                                    <span>✓ {{ __('Current logo active') }}</span>
-                                </div>
-                            @endif
-                            <label class="ps-upload" for="bill_logo">
-                                <i class="ti ti-cloud-upload ps-upload-icon"></i>
-                                <span class="ps-upload-text">{{ __('Click to upload new logo') }}</span>
-                                <span class="ps-upload-hint">PNG, JPG — max 20MB</span>
-                                <input type="file" name="bill_logo" id="bill_logo" accept="image/*">
-                            </label>
-                            <img id="bill_image" class="ps-logo-preview" src="" alt="Logo Preview">
-                        </div>
-
-                        <button type="submit" class="ps-btn purple">
-                            <i class="ti ti-device-floppy"></i> {{ __('Save Changes') }}
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-            <div class="ps-preview">
-                <div class="ps-preview-bar">
-                    <span class="ps-dot" style="background:#ef4444;"></span>
-                    <span class="ps-dot" style="background:#f59e0b;"></span>
-                    <span class="ps-dot" style="background:#22c55e;"></span>
-                    <span class="ps-preview-label">{{ __('Live Preview') }}</span>
-                </div>
-                @php
-                    $b_tpl   = $settings['bill_template'] ?? 'template1';
-                    $b_color = $settings['bill_color']    ?? 'ffffff';
-                @endphp
-                <iframe id="bill_frame" class="ps-iframe"
-                    src="{{ route('bill.preview', [$b_tpl, $b_color]) }}"></iframe>
-            </div>
-
-        </div>
-    </div>
-
+    @php
+        $i_tpl   = $settings['invoice_template'] ?? 'template1';
+        $i_color = $settings['invoice_color']    ?? 'ffffff';
+    @endphp
+    <iframe id="invoice_frame" class="ps-iframe"
+        src="{{ route('invoice.preview', [$i_tpl, $i_color]) }}"></iframe>
 </div>
+
+</div>{{-- /ps-main-grid --}}
+</div>{{-- /ps-page --}}
+
+<script>
+var _psCurrentType = 'agent';
+
+function toggleCollapse(bodyId, header) {
+    var body = document.getElementById(bodyId);
+    var icon = header.querySelector('.ps-chevron');
+    var open = body.classList.contains('open');
+    body.classList.toggle('open', !open);
+    if (icon) icon.classList.toggle('open', !open);
+}
+
+function setPartyType(type) {
+    _psCurrentType = type;
+    // update button styles
+    ['agent','client','vendor'].forEach(function(t) {
+        var btn = document.getElementById('btn_' + t);
+        btn.className = 'ps-party-btn' + (t === type ? ' active-' + t : '');
+    });
+    // update label
+    var labels = { agent: '{{ __("Select Agent") }}', client: '{{ __("Select Client") }}', vendor: '{{ __("Select Vendor") }}' };
+    document.getElementById('ps_party_label').textContent = labels[type];
+    // rebuild dropdown
+    var sel  = document.getElementById('ps_party_id');
+    var list = type === 'agent' ? _psAgents : (type === 'client' ? _psCustomers : _psVendors);
+    sel.innerHTML = '<option value="">— ' + labels[type] + ' —</option>';
+    list.forEach(function(item) {
+        var opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = item.name + (item.email ? '  ·  ' + item.email : '');
+        sel.appendChild(opt);
+    });
+    clearPartyPreview();
+}
+
+function clearPartyPreview() {
+    document.getElementById('ps_party_info').style.display = 'none';
+    document.getElementById('ps_preview_party_label').style.display = 'none';
+    _psSelectedParty = null;
+}
+
+function onPartySelect(id) {
+    if (!id) { clearPartyPreview(); return; }
+    var type = _psCurrentType;
+    var list = type === 'agent' ? _psAgents : (type === 'client' ? _psCustomers : _psVendors);
+    var item = null;
+    for (var i = 0; i < list.length; i++) { if (list[i].id == id) { item = list[i]; break; } }
+    if (!item) return;
+
+    _psSelectedParty = { id: id, name: item.name, email: item.email, partyType: type };
+
+    // avatar
+    var av = document.getElementById('ps_party_avatar');
+    av.textContent = item.name.charAt(0).toUpperCase();
+    av.className = 'ps-party-avatar ' + type;
+
+    document.getElementById('ps_party_name').textContent  = item.name;
+    document.getElementById('ps_party_email').textContent = item.email || item.contact || '—';
+    document.getElementById('ps_party_addr').textContent  = '';
+
+    var badge = document.getElementById('ps_party_badge');
+    var labels = { agent: '{{ __("Agent") }}', client: '{{ __("Client") }}', vendor: '{{ __("Vendor") }}' };
+    badge.textContent = labels[type];
+    badge.className   = 'ps-party-badge ' + type;
+
+    document.getElementById('ps_party_info').style.display = 'block';
+
+    // preview label
+    var lbl = document.getElementById('ps_preview_party_label');
+    lbl.textContent = item.name;
+    lbl.style.display = 'inline-block';
+
+    // if client or vendor — load address and update preview
+    if (type === 'client' || type === 'vendor') {
+        var apiType = type === 'client' ? 'customer' : 'vendor';
+        fetch('{{ route("print.recipient.data") }}?type=' + apiType + '&id=' + id, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            var addr = [];
+            if (data.billing_address) addr.push(data.billing_address);
+            if (data.billing_city)    addr.push(data.billing_city);
+            if (data.billing_country) addr.push(data.billing_country);
+            document.getElementById('ps_party_addr').textContent = addr.join(', ') || '{{ __("No address on file") }}';
+        }).catch(function() {});
+    }
+}
+
+function updatePartyDropdown() {
+    setPartyType('agent');
+}
+</script>
 @endsection
