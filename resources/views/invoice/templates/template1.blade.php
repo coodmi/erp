@@ -48,7 +48,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-
 
 /* LEFT: logo stacked above qr */
 .inv-head-left{display:flex;flex-direction:column;align-items:flex-start;gap:14px;flex-shrink:0}
-.inv-logo{max-height:44px;max-width:130px;object-fit:contain;display:block}
+.inv-logo{max-height:72px;max-width:200px;object-fit:contain;display:block}
 .inv-qr-box{width:52px;height:52px;border-radius:8px;padding:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .inv-qr-box img,.inv-qr-box svg,.inv-qr-box table{width:100%!important;height:100%!important;max-width:44px;max-height:44px}
 /* white bg = dark qr, colored bg = white qr via invert */
