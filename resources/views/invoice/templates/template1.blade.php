@@ -46,12 +46,14 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-
 /* header layout: left = logo+qr, right = title+meta */
 .inv-header-inner{display:flex;justify-content:space-between;align-items:stretch;gap:20px}
 
-/* LEFT: logo + qr stacked */
-.inv-head-left{display:flex;flex-direction:column;justify-content:space-between;gap:20px;flex-shrink:0}
-.inv-logo-qr{display:flex;align-items:center;gap:14px}
-.inv-logo{max-height:48px;max-width:140px;object-fit:contain;display:block}
-.inv-qr-box{width:68px;height:68px;background:rgba(255,255,255,.18);border-radius:10px;padding:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
-.inv-qr-box img,.inv-qr-box svg,.inv-qr-box table{width:100%!important;height:100%!important;max-width:56px;max-height:56px}
+/* LEFT: logo stacked above qr */
+.inv-head-left{display:flex;flex-direction:column;align-items:flex-start;gap:14px;flex-shrink:0}
+.inv-logo{max-height:44px;max-width:130px;object-fit:contain;display:block}
+.inv-qr-box{width:52px;height:52px;border-radius:8px;padding:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.inv-qr-box img,.inv-qr-box svg,.inv-qr-box table{width:100%!important;height:100%!important;max-width:44px;max-height:44px}
+/* white bg = dark qr, colored bg = white qr via invert */
+.inv-qr-box.qr-invert{background:rgba(255,255,255,.15);filter:invert(1) brightness(2)}
+.inv-qr-box.qr-normal{background:rgba(255,255,255,.95)}
 .inv-company-name{font-size:13.5px;font-weight:700;color:var(--hfg);margin-bottom:4px}
 .inv-company-detail{font-size:11px;color:rgba(255,255,255,.7);line-height:1.8}
 
@@ -147,13 +149,11 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
   <div class="inv-header">
     <div class="inv-header-inner">
 
-      {{-- LEFT: logo + qr + company --}}
+      {{-- LEFT: logo → qr (stacked) + company --}}
       <div class="inv-head-left">
-        <div class="inv-logo-qr">
-          <img class="inv-logo" src="{{ $img }}" alt="Logo">
-          <div class="inv-qr-box">
-            {!! DNS2D::getBarcodeHTML(route('invoice.link.copy',\Crypt::encrypt($invoice->invoice_id)),"QRCODE",2,2) !!}
-          </div>
+        <img class="inv-logo" src="{{ $img }}" alt="Logo">
+        <div class="inv-qr-box {{ $isLight ? 'qr-normal' : 'qr-invert' }}">
+          {!! DNS2D::getBarcodeHTML(route('invoice.link.copy',\Crypt::encrypt($invoice->invoice_id)),"QRCODE",2,2) !!}
         </div>
         <div>
           <div class="inv-company-name">{{ $settings['company_name'] ?? '' }}</div>
