@@ -43,22 +43,25 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-
 .inv-header{background:var(--hbg);padding:32px 36px 28px;position:relative;overflow:hidden}
 .inv-header::after{content:'';position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.05);pointer-events:none}
 
-.inv-header-row1{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:28px}
-.inv-logo{max-height:52px;max-width:150px;object-fit:contain;display:block}
-.inv-doc-title{font-size:38px;font-weight:900;letter-spacing:.05em;text-transform:uppercase;color:var(--hfg);opacity:.95;line-height:1;text-align:right}
+/* header layout: left = logo+qr, right = title+meta */
+.inv-header-inner{display:flex;justify-content:space-between;align-items:stretch;gap:20px}
 
-.inv-header-row2{display:flex;justify-content:space-between;align-items:flex-end;gap:16px}
-.inv-company-name{font-size:14px;font-weight:700;color:var(--hfg);margin-bottom:5px}
-.inv-company-detail{font-size:11.5px;color:rgba(255,255,255,.72);line-height:1.8}
+/* LEFT: logo + qr stacked */
+.inv-head-left{display:flex;flex-direction:column;justify-content:space-between;gap:20px;flex-shrink:0}
+.inv-logo-qr{display:flex;align-items:center;gap:14px}
+.inv-logo{max-height:48px;max-width:140px;object-fit:contain;display:block}
+.inv-qr-box{width:68px;height:68px;background:rgba(255,255,255,.18);border-radius:10px;padding:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.inv-qr-box img,.inv-qr-box svg,.inv-qr-box table{width:100%!important;height:100%!important;max-width:56px;max-height:56px}
+.inv-company-name{font-size:13.5px;font-weight:700;color:var(--hfg);margin-bottom:4px}
+.inv-company-detail{font-size:11px;color:rgba(255,255,255,.7);line-height:1.8}
 
-/* meta + qr block */
-.inv-meta-qr{display:flex;align-items:flex-end;gap:14px;flex-shrink:0}
+/* RIGHT: title + meta */
+.inv-head-right{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:16px}
+.inv-doc-title{font-size:40px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--hfg);opacity:.95;line-height:1;text-align:right}
 .inv-meta{border-collapse:collapse}
 .inv-meta td{padding:2.5px 0;font-size:12px;color:rgba(255,255,255,.8)}
 .inv-meta td:first-child{padding-right:20px;white-space:nowrap;font-weight:500}
 .inv-meta td:last-child{text-align:right;font-weight:700;color:var(--hfg)}
-.inv-qr-box{width:72px;height:72px;background:rgba(255,255,255,.15);border-radius:10px;padding:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center}
-.inv-qr-box img,.inv-qr-box svg,.inv-qr-box table{width:100%!important;height:100%!important;max-width:60px;max-height:60px}
 
 /* ── body ── */
 .inv-body{padding:28px 36px 36px}
@@ -121,9 +124,9 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
 
 @media(max-width:620px){
   .inv-header,.inv-body{padding:20px}
-  .inv-header-row1,.inv-header-row2{flex-direction:column;align-items:flex-start}
+  .inv-header-inner{flex-direction:column}
+  .inv-head-right{align-items:flex-start}
   .inv-doc-title{text-align:left;font-size:28px}
-  .inv-meta-qr{flex-direction:row;align-items:center}
   .inv-addr-grid{grid-template-columns:1fr}
   .inv-totals{width:100%}
 }
@@ -142,26 +145,35 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
 
   {{-- HEADER --}}
   <div class="inv-header">
-    <div class="inv-header-row1">
-      <img class="inv-logo" src="{{ $img }}" alt="Logo">
-      <div class="inv-doc-title">{{ __('Invoice') }}</div>
-    </div>
-    <div class="inv-header-row2">
-      <div>
-        <div class="inv-company-name">{{ $settings['company_name'] ?? '' }}</div>
-        <div class="inv-company-detail">
-          @if(!empty($settings['mail_from_address'])){{ $settings['mail_from_address'] }}<br>@endif
-          @if(!empty($settings['company_address'])){{ $settings['company_address'] }}@endif
-          @if(!empty($settings['company_city'])), {{ $settings['company_city'] }}@endif
-          @if(!empty($settings['company_state'])) {{ $settings['company_state'] }}@endif
-          @if(!empty($settings['company_zipcode'])) {{ $settings['company_zipcode'] }}@endif
-          @if(!empty($settings['company_country']))<br>{{ $settings['company_country'] }}@endif
-          @if(!empty($settings['company_telephone']))<br>{{ $settings['company_telephone'] }}@endif
-          @if(!empty($settings['registration_number']))<br>{{ __('Reg') }}: {{ $settings['registration_number'] }}@endif
-          @if(!empty($settings['vat_gst_number_switch']) && $settings['vat_gst_number_switch']=='on' && !empty($settings['vat_number']))<br>{{ $settings['tax_type'] ?? 'VAT' }}: {{ $settings['vat_number'] }}@endif
+    <div class="inv-header-inner">
+
+      {{-- LEFT: logo + qr + company --}}
+      <div class="inv-head-left">
+        <div class="inv-logo-qr">
+          <img class="inv-logo" src="{{ $img }}" alt="Logo">
+          <div class="inv-qr-box">
+            {!! DNS2D::getBarcodeHTML(route('invoice.link.copy',\Crypt::encrypt($invoice->invoice_id)),"QRCODE",2,2) !!}
+          </div>
+        </div>
+        <div>
+          <div class="inv-company-name">{{ $settings['company_name'] ?? '' }}</div>
+          <div class="inv-company-detail">
+            @if(!empty($settings['mail_from_address'])){{ $settings['mail_from_address'] }}<br>@endif
+            @if(!empty($settings['company_address'])){{ $settings['company_address'] }}@endif
+            @if(!empty($settings['company_city'])), {{ $settings['company_city'] }}@endif
+            @if(!empty($settings['company_state'])) {{ $settings['company_state'] }}@endif
+            @if(!empty($settings['company_zipcode'])) {{ $settings['company_zipcode'] }}@endif
+            @if(!empty($settings['company_country']))<br>{{ $settings['company_country'] }}@endif
+            @if(!empty($settings['company_telephone']))<br>{{ $settings['company_telephone'] }}@endif
+            @if(!empty($settings['registration_number']))<br>{{ __('Reg') }}: {{ $settings['registration_number'] }}@endif
+            @if(!empty($settings['vat_gst_number_switch']) && $settings['vat_gst_number_switch']=='on' && !empty($settings['vat_number']))<br>{{ $settings['tax_type'] ?? 'VAT' }}: {{ $settings['vat_number'] }}@endif
+          </div>
         </div>
       </div>
-      <div class="inv-meta-qr">
+
+      {{-- RIGHT: title + meta --}}
+      <div class="inv-head-right">
+        <div class="inv-doc-title">{{ __('Invoice') }}</div>
         <table class="inv-meta">
           <tr><td>{{ __('Invoice No') }}</td><td>{{ Utility::invoiceNumberFormat($settings,$invoice->invoice_id) }}</td></tr>
           <tr><td>{{ __('Issue Date') }}</td><td>{{ Utility::dateFormat($settings,$invoice->issue_date) }}</td></tr>
@@ -172,10 +184,8 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
             @endforeach
           @endif
         </table>
-        <div class="inv-qr-box">
-          {!! DNS2D::getBarcodeHTML(route('invoice.link.copy',\Crypt::encrypt($invoice->invoice_id)),"QRCODE",2,2) !!}
-        </div>
       </div>
+
     </div>
   </div>
 
