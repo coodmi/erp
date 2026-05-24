@@ -3589,3 +3589,29 @@ body.minimenu .dash-sidebar .main-logo a.b-brand.ai-sidebar-brand .ai-sidebar-br
     -webkit-backdrop-filter: blur(4px) !important;
 }
 /* ─────────────────────────────────────────────────────────────────────────── */
+
+/* ── Modern Scrollbar — dataTable-container & table-responsive ── */
+.dataTable-container,
+.table-responsive {
+    scrollbar-width: thin;
+    scrollbar-color: #93c5fd #f1f5f9;
+}
+.dataTable-container::-webkit-scrollbar,
+.table-responsive::-webkit-scrollbar {
+    height: 5px;
+    width: 5px;
+}
+.dataTable-container::-webkit-scrollbar-track,
+.table-responsive::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 999px;
+}
+.dataTable-container::-webkit-scrollbar-thumb,
+.table-responsive::-webkit-scrollbar-thumb {
+    background: linear-gradient(90deg, #93c5fd, #3b82f6);
+    border-radius: 999px;
+}
+.dataTable-container::-webkit-scrollbar-thumb:hover,
+.table-responsive::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(90deg, #3b82f6, #1d4ed8);
+}
