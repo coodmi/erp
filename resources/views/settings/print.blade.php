@@ -67,6 +67,138 @@ function toggleSection(bodyId, header) {
     icon.classList.toggle('open', !isOpen);
 }
 
+// ══════════════════════════════════════════════
+// QUICK LAUNCHER
+// ══════════════════════════════════════════════
+var _qlCustomers = @json($customers->map(fn($c) => ['id'=>$c->id,'name'=>$c->name,'email'=>$c->email??'','contact'=>$c->contact??'']));
+var _qlVendors   = @json($vendors->map(fn($v) => ['id'=>$v->id,'name'=>$v->name,'email'=>$v->email??'','contact'=>$v->contact??'']));
+var _qlSelectedDoc  = null;
+var _qlSelectedType = 'customer';
+
+// Routes for document creation
+var _qlRoutes = {
+    invoice:  '{{ url("invoice/create") }}',
+    proposal: '{{ url("proposal/create") }}',
+    bill:     '{{ url("bill/create") }}',
+};
+
+function qlUpdateClientList() {
+    _qlSelectedType = document.getElementById('ql_type').value;
+    var list = _qlSelectedType === 'customer' ? _qlCustomers : _qlVendors;
+    var sel  = document.getElementById('ql_client');
+    sel.innerHTML = '<option value="">— {{ __("Choose client") }} —</option>';
+    list.forEach(function(item) {
+        var opt = document.createElement('option');
+        opt.value = item.id;
+        opt.textContent = item.name + (item.email ? ' · ' + item.email : '');
+        sel.appendChild(opt);
+    });
+    // Reset UI
+    document.getElementById('ql_client_preview').style.display = 'none';
+    document.getElementById('ql_launch_wrap').style.display = 'none';
+    _qlSelectedDoc = null;
+    qlResetDocCards();
+
+    // Bill only for vendors
+    var billCard = document.getElementById('ql_card_bill');
+    var invoiceCard  = document.getElementById('ql_card_invoice');
+    var proposalCard = document.getElementById('ql_card_proposal');
+    var notice = document.getElementById('ql_vendor_notice');
+    if (_qlSelectedType === 'vendor') {
+        invoiceCard.classList.add('disabled');
+        proposalCard.classList.add('disabled');
+        billCard.classList.remove('disabled');
+        notice.style.display = 'block';
+        // Auto-select bill for vendor
+        document.querySelector('input[value="bill"]').checked = true;
+        qlDocSelect('bill');
+    } else {
+        invoiceCard.classList.remove('disabled');
+        proposalCard.classList.remove('disabled');
+        billCard.classList.add('disabled');
+        notice.style.display = 'none';
+    }
+}
+
+function qlLoadClientInfo() {
+    var id   = document.getElementById('ql_client').value;
+    var type = document.getElementById('ql_type').value;
+    if (!id) {
+        document.getElementById('ql_client_preview').style.display = 'none';
+        document.getElementById('ql_launch_wrap').style.display = 'none';
+        return;
+    }
+    var list   = type === 'customer' ? _qlCustomers : _qlVendors;
+    var client = list.find(function(c) { return c.id == id; });
+    if (!client) return;
+
+    document.getElementById('ql_avatar_letter').textContent = client.name.charAt(0).toUpperCase();
+    document.getElementById('ql_client_name').textContent   = client.name;
+    document.getElementById('ql_client_email').textContent  = client.email || client.contact || '—';
+
+    // Load address via AJAX
+    fetch('{{ route("print.recipient.data") }}?type=' + type + '&id=' + id, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(r => r.json())
+    .then(function(data) {
+        var addr = [];
+        if (data.billing_address) addr.push(data.billing_address);
+        if (data.billing_city)    addr.push(data.billing_city);
+        if (data.billing_country) addr.push(data.billing_country);
+        document.getElementById('ql_client_address').textContent = addr.length ? addr.join(', ') : '{{ __("No address on file") }}';
+    }).catch(function() {});
+
+    var badge = document.getElementById('ql_client_badge');
+    badge.textContent = type === 'customer' ? '{{ __("Customer") }}' : '{{ __("Vendor") }}';
+    badge.className   = 'ql-badge ' + (type === 'customer' ? 'ql-badge-customer' : 'ql-badge-vendor');
+
+    document.getElementById('ql_client_preview').style.display = 'block';
+    qlCheckLaunch();
+}
+
+function qlDocSelect(docType) {
+    _qlSelectedDoc = docType;
+    qlResetDocCards();
+    document.getElementById('ql_card_' + docType).classList.add('selected');
+    qlCheckLaunch();
+}
+
+function qlResetDocCards() {
+    ['invoice','proposal','bill'].forEach(function(t) {
+        var card = document.getElementById('ql_card_' + t);
+        if (card) card.classList.remove('selected');
+    });
+}
+
+function qlCheckLaunch() {
+    var clientId = document.getElementById('ql_client').value;
+    if (!clientId || !_qlSelectedDoc) {
+        document.getElementById('ql_launch_wrap').style.display = 'none';
+        return;
+    }
+    var clientName = document.getElementById('ql_client_name').textContent;
+    var docLabels  = { invoice: '{{ __("Invoice") }}', proposal: '{{ __("Proposal") }}', bill: '{{ __("Bill") }}' };
+    document.getElementById('ql_summary_text').textContent =
+        '{{ __("Ready to create") }} ' + docLabels[_qlSelectedDoc] + ' {{ __("for") }} ' + clientName;
+    document.getElementById('ql_launch_label').textContent =
+        '{{ __("Create") }} ' + docLabels[_qlSelectedDoc] + ' {{ __("for") }} ' + clientName;
+    document.getElementById('ql_launch_wrap').style.display = 'block';
+}
+
+function qlLaunch() {
+    var clientId = document.getElementById('ql_client').value;
+    if (!clientId || !_qlSelectedDoc) return false;
+    var url = _qlRoutes[_qlSelectedDoc] + '/' + clientId;
+    window.location.href = url;
+    return false;
+}
+
+// Init: disable bill for customer by default
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('ql_card_bill').classList.add('disabled');
+});
+
 // ── Recipient Address ──
 var _customerOptions = @json($customers->map(fn($c) => ['id'=>$c->id,'name'=>$c->name,'email'=>$c->email??'']));
 var _vendorOptions   = @json($vendors->map(fn($v) => ['id'=>$v->id,'name'=>$v->name,'email'=>$v->email??'']));
@@ -390,6 +522,137 @@ function saveRecipientAddress() {
 /* ─── Divider ─── */
 .ps-divider { height: 1px; background: var(--c-border); margin: 18px 0; }
 
+/* ─── Quick Launcher ─── */
+.ql-step-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: .8rem;
+    font-weight: 800;
+    color: #475569;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    margin-bottom: 12px;
+}
+.ql-step-num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: linear-gradient(135deg,#3b82f6,#2563eb);
+    color: #fff;
+    font-size: .72rem;
+    font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.ql-row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+
+/* Client preview card */
+.ql-client-card {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    background: linear-gradient(135deg,#f0fdf4,#dcfce7);
+    border: 1px solid #bbf7d0;
+    border-radius: 14px;
+}
+.ql-client-avatar {
+    width: 44px; height: 44px;
+    border-radius: 12px;
+    background: linear-gradient(135deg,#3b82f6,#2563eb);
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 800;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+}
+.ql-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: .7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    flex-shrink: 0;
+}
+.ql-badge-customer { background: #dbeafe; color: #1d4ed8; }
+.ql-badge-vendor   { background: #ede9fe; color: #6d28d9; }
+
+/* Document type cards */
+.ql-doc-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 4px;
+}
+@media (max-width: 700px) { .ql-doc-grid { grid-template-columns: 1fr; } }
+.ql-doc-card {
+    position: relative;
+    border: 2px solid var(--c-border);
+    border-radius: 14px;
+    padding: 18px 16px;
+    cursor: pointer;
+    transition: all .18s;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow: hidden;
+}
+.ql-doc-card:hover { border-color: #93c5fd; background: #f0f9ff; }
+.ql-doc-card.selected { border-color: #2563eb; background: #eff6ff; box-shadow: 0 0 0 3px rgba(37,99,235,.12); }
+.ql-doc-card.disabled { opacity: .4; pointer-events: none; }
+.ql-doc-radio { position: absolute; opacity: 0; width: 0; height: 0; }
+.ql-doc-icon {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff;
+    font-size: 1.1rem;
+    margin-bottom: 4px;
+}
+.ql-doc-name { font-size: .9rem; font-weight: 800; color: #0f172a; }
+.ql-doc-desc { font-size: .75rem; color: #64748b; line-height: 1.4; }
+.ql-doc-check {
+    position: absolute;
+    top: 10px; right: 10px;
+    font-size: 1.1rem;
+    color: #2563eb;
+    display: none;
+}
+.ql-doc-card.selected .ql-doc-check { display: block; }
+
+/* Summary + Launch */
+.ql-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding: 10px 14px;
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 10px;
+}
+.ql-launch-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 14px 22px;
+    border-radius: 14px;
+    font-size: .95rem;
+    font-weight: 800;
+    color: #fff;
+    background: linear-gradient(135deg,#10b981,#059669);
+    box-shadow: 0 8px 24px rgba(5,150,105,.28);
+    text-decoration: none;
+    transition: all .2s;
+    border: none;
+    cursor: pointer;
+}
+.ql-launch-btn:hover { filter: brightness(1.06); transform: translateY(-1px); color: #fff; text-decoration: none; }
+.ql-launch-btn i { font-size: 1.1rem; }
+
 /* ─── Section spacing ─── */
 .ps-field { margin-bottom: 20px; }
 .ps-field:last-child { margin-bottom: 0; }
@@ -608,6 +871,122 @@ function saveRecipientAddress() {
                     <i class="ti ti-device-floppy"></i> {{ __('Save Company Info') }}
                 </button>
             </form>
+        </div>
+    </div>
+
+    {{-- ══════════════════════════════════════════════════════════════ --}}
+    {{-- QUICK DOCUMENT LAUNCHER --}}
+    {{-- ══════════════════════════════════════════════════════════════ --}}
+    <div class="ps-company-card">
+        <div class="ps-company-head" onclick="toggleSection('launcherBody', this)">
+            <div class="ps-company-head-left">
+                <div class="ps-card-icon" style="width:36px;height:36px;font-size:.95rem;background:linear-gradient(135deg,#10b981,#059669);box-shadow:0 6px 14px rgba(5,150,105,.25);">
+                    <i class="ti ti-rocket"></i>
+                </div>
+                <div>
+                    <p class="ps-card-title">{{ __('Create Document') }}</p>
+                    <p class="ps-card-sub">{{ __('Select client & document type to quickly create Invoice, Proposal or Bill') }}</p>
+                </div>
+            </div>
+            <i class="ti ti-chevron-down ps-company-toggle-icon"></i>
+        </div>
+        <div class="ps-company-body open" id="launcherBody">
+
+            {{-- Step 1: Client Type + Client Select --}}
+            <div class="ql-step-label">
+                <span class="ql-step-num">1</span>
+                {{ __('Who is this document for?') }}
+            </div>
+            <div class="ql-row" style="margin-bottom:20px;">
+                <div style="flex:0 0 160px;">
+                    <label class="ps-label">{{ __('Client Type') }}</label>
+                    <select id="ql_type" class="ps-select" onchange="qlUpdateClientList()">
+                        <option value="customer">{{ __('Customer') }}</option>
+                        <option value="vendor">{{ __('Vendor') }}</option>
+                    </select>
+                </div>
+                <div style="flex:1;min-width:220px;">
+                    <label class="ps-label">{{ __('Select Client') }}</label>
+                    <select id="ql_client" class="ps-select" onchange="qlLoadClientInfo()">
+                        <option value="">— {{ __('Choose client') }} —</option>
+                        @foreach($customers as $c)
+                            <option value="{{ $c->id }}" data-type="customer">
+                                {{ $c->name }}@if($c->email) · {{ $c->email }}@endif
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
+            </div>
+
+            {{-- Client Info Preview (shown after selection) --}}
+            <div id="ql_client_preview" style="display:none;margin-bottom:20px;">
+                <div class="ql-client-card">
+                    <div class="ql-client-avatar" id="ql_avatar_letter">A</div>
+                    <div style="flex:1;">
+                        <div style="font-size:.95rem;font-weight:800;color:#0f172a;" id="ql_client_name">—</div>
+                        <div style="font-size:.78rem;color:#64748b;margin-top:2px;" id="ql_client_email">—</div>
+                        <div style="font-size:.78rem;color:#64748b;margin-top:1px;" id="ql_client_address">—</div>
+                    </div>
+                    <div id="ql_client_badge" class="ql-badge ql-badge-customer">{{ __('Customer') }}</div>
+                </div>
+            </div>
+
+            {{-- Step 2: Document Type --}}
+            <div class="ql-step-label">
+                <span class="ql-step-num">2</span>
+                {{ __('What document do you want to create?') }}
+            </div>
+            <div class="ql-doc-grid" id="ql_doc_grid">
+                {{-- Invoice --}}
+                <label class="ql-doc-card" id="ql_card_invoice">
+                    <input type="radio" name="ql_doc_type" value="invoice" class="ql-doc-radio" onchange="qlDocSelect('invoice')">
+                    <div class="ql-doc-icon" style="background:linear-gradient(135deg,#34d399,#059669);">
+                        <i class="ti ti-file-invoice"></i>
+                    </div>
+                    <div class="ql-doc-name">{{ __('Invoice') }}</div>
+                    <div class="ql-doc-desc">{{ __('Bill a customer for products or services') }}</div>
+                    <div class="ql-doc-check"><i class="ti ti-circle-check-filled"></i></div>
+                </label>
+                {{-- Proposal --}}
+                <label class="ql-doc-card" id="ql_card_proposal">
+                    <input type="radio" name="ql_doc_type" value="proposal" class="ql-doc-radio" onchange="qlDocSelect('proposal')">
+                    <div class="ql-doc-icon" style="background:linear-gradient(135deg,#3b82f6,#2563eb);">
+                        <i class="ti ti-file-text"></i>
+                    </div>
+                    <div class="ql-doc-name">{{ __('Proposal') }}</div>
+                    <div class="ql-doc-desc">{{ __('Send a quote or proposal to a customer') }}</div>
+                    <div class="ql-doc-check"><i class="ti ti-circle-check-filled"></i></div>
+                </label>
+                {{-- Bill --}}
+                <label class="ql-doc-card" id="ql_card_bill">
+                    <input type="radio" name="ql_doc_type" value="bill" class="ql-doc-radio" onchange="qlDocSelect('bill')">
+                    <div class="ql-doc-icon" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);">
+                        <i class="ti ti-receipt"></i>
+                    </div>
+                    <div class="ql-doc-name">{{ __('Bill') }}</div>
+                    <div class="ql-doc-desc">{{ __('Record a purchase bill from a vendor') }}</div>
+                    <div class="ql-doc-check"><i class="ti ti-circle-check-filled"></i></div>
+                </label>
+            </div>
+
+            {{-- Vendor-only notice --}}
+            <div id="ql_vendor_notice" style="display:none;margin-top:10px;padding:10px 14px;background:#fef3c7;border:1px solid #fde68a;border-radius:10px;font-size:.8rem;color:#92400e;font-weight:600;">
+                <i class="ti ti-info-circle"></i> {{ __('Bills are for Vendors only. Invoices & Proposals are for Customers.') }}
+            </div>
+
+            {{-- Step 3: Launch Button --}}
+            <div id="ql_launch_wrap" style="display:none;margin-top:24px;padding-top:20px;border-top:1px solid #e2e8f0;">
+                <div class="ql-summary" id="ql_summary">
+                    <i class="ti ti-arrow-right-circle" style="font-size:1.1rem;color:#2563eb;"></i>
+                    <span id="ql_summary_text" style="font-size:.88rem;font-weight:700;color:#0f172a;"></span>
+                </div>
+                <a href="#" id="ql_launch_btn" class="ql-launch-btn" onclick="return qlLaunch()">
+                    <i class="ti ti-rocket"></i>
+                    <span id="ql_launch_label">{{ __('Create Document') }}</span>
+                    <i class="ti ti-arrow-right" style="margin-left:auto;"></i>
+                </a>
+            </div>
+
         </div>
     </div>
 
