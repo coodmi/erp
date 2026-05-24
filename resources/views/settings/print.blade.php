@@ -8,6 +8,10 @@
 
 @push('script-page')
 <script>
+// Toggle VAT field visibility
+function toggleVat(el) {
+    document.getElementById('vat-fields').style.display = el.checked ? 'block' : 'none';
+}
 // Live preview update on template/color change
 $(document).on("change", "select[name='proposal_template'], input[name='proposal_color']", function () {
     var template = $("select[name='proposal_template']").val();
@@ -44,6 +48,14 @@ function switchTab(tab, btn) {
     document.querySelectorAll('.ps-tab').forEach(b => b.classList.remove('active'));
     document.getElementById('pane-' + tab).classList.add('active');
     btn.classList.add('active');
+}
+
+function toggleCompanyInfo(header) {
+    var body = document.getElementById('companyInfoBody');
+    var icon = header.querySelector('.ps-company-toggle-icon');
+    var isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    icon.classList.toggle('open', !isOpen);
 }
 </script>
 @endpush
@@ -273,9 +285,223 @@ function switchTab(tab, btn) {
 /* ─── Section spacing ─── */
 .ps-field { margin-bottom: 20px; }
 .ps-field:last-child { margin-bottom: 0; }
+
+/* ─── Company Info Card ─── */
+.ps-company-card {
+    background: var(--c-white);
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+.ps-company-head {
+    padding: 16px 22px;
+    border-bottom: 1px solid var(--c-border);
+    background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    user-select: none;
+}
+.ps-company-head-left { display: flex; align-items: center; gap: 12px; }
+.ps-company-toggle-icon { transition: transform .2s; font-size: .85rem; color: var(--c-muted); }
+.ps-company-toggle-icon.open { transform: rotate(180deg); }
+.ps-company-body { padding: 22px; display: none; }
+.ps-company-body.open { display: block; }
+.ps-input {
+    width: 100%;
+    min-height: 42px;
+    border: 1.5px solid var(--c-border);
+    border-radius: var(--radius-md);
+    font-size: .88rem;
+    padding: 9px 13px;
+    background: #f8fafc;
+    color: var(--c-dark);
+    transition: all .2s;
+    outline: none;
+    font-family: inherit;
+}
+.ps-input:focus { border-color: var(--c-blue); background: #fff; box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+.ps-input-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+}
+@media (max-width: 600px) { .ps-input-grid { grid-template-columns: 1fr; } }
+.ps-toggle-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+}
+.ps-toggle-row label { font-size: .84rem; font-weight: 600; color: var(--c-dark); cursor: pointer; }
+.ps-switch { position: relative; display: inline-block; width: 40px; height: 22px; flex-shrink: 0; }
+.ps-switch input { opacity: 0; width: 0; height: 0; }
+.ps-slider {
+    position: absolute; inset: 0;
+    background: #cbd5e1; border-radius: 22px;
+    cursor: pointer; transition: .2s;
+}
+.ps-slider:before {
+    content: ''; position: absolute;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: white; left: 3px; top: 3px;
+    transition: .2s; box-shadow: 0 1px 4px rgba(0,0,0,.2);
+}
+.ps-switch input:checked + .ps-slider { background: var(--c-blue); }
+.ps-switch input:checked + .ps-slider:before { transform: translateX(18px); }
+.ps-save-sm {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 10px 22px;
+    border-radius: var(--radius-md);
+    font-weight: 700; font-size: .85rem;
+    border: 0; cursor: pointer;
+    background: linear-gradient(135deg,#3b82f6,#2563eb);
+    color: #fff;
+    box-shadow: 0 6px 16px rgba(37,99,235,.22);
+    transition: all .2s;
+    margin-top: 18px;
+}
+.ps-save-sm:hover { filter: brightness(1.06); transform: translateY(-1px); }
 </style>
 
 <div class="ps-page">
+
+    {{-- ══════════════════════════════════════════════════════════════ --}}
+    {{-- COMPANY INFO CARD (collapsible) --}}
+    {{-- ══════════════════════════════════════════════════════════════ --}}
+    <div class="ps-company-card">
+        <div class="ps-company-head" onclick="toggleCompanyInfo(this)">
+            <div class="ps-company-head-left">
+                <div class="ps-card-icon blue" style="width:36px;height:36px;font-size:.95rem;">
+                    <i class="ti ti-building"></i>
+                </div>
+                <div>
+                    <p class="ps-card-title">{{ __('Company Info') }}</p>
+                    <p class="ps-card-sub">{{ __('Address & details shown on all print documents') }}</p>
+                </div>
+            </div>
+            <i class="ti ti-chevron-down ps-company-toggle-icon"></i>
+        </div>
+        <div class="ps-company-body" id="companyInfoBody">
+            <form method="post" action="{{ route('company.settings') }}" enctype="multipart/form-data">
+                @csrf
+
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Company Name') }}</label>
+                    <input type="text" name="company_name" class="ps-input"
+                        value="{{ $settings['company_name'] ?? '' }}"
+                        placeholder="{{ __('Your Company Name') }}" required>
+                </div>
+
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Email Address') }}</label>
+                    <input type="email" name="mail_from_address" class="ps-input"
+                        value="{{ $settings['mail_from_address'] ?? '' }}"
+                        placeholder="info@company.com">
+                </div>
+
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Phone / Telephone') }}</label>
+                    <input type="text" name="company_telephone" class="ps-input"
+                        value="{{ $settings['company_telephone'] ?? '' }}"
+                        placeholder="+1 234 567 8900">
+                </div>
+
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Street Address') }}</label>
+                    <input type="text" name="company_address" class="ps-input"
+                        value="{{ $settings['company_address'] ?? '' }}"
+                        placeholder="{{ __('Street address') }}">
+                </div>
+
+                <div class="ps-input-grid ps-field">
+                    <div>
+                        <label class="ps-label">{{ __('City') }}</label>
+                        <input type="text" name="company_city" class="ps-input"
+                            value="{{ $settings['company_city'] ?? '' }}"
+                            placeholder="{{ __('City') }}">
+                    </div>
+                    <div>
+                        <label class="ps-label">{{ __('State / Province') }}</label>
+                        <input type="text" name="company_state" class="ps-input"
+                            value="{{ $settings['company_state'] ?? '' }}"
+                            placeholder="{{ __('State') }}">
+                    </div>
+                    <div>
+                        <label class="ps-label">{{ __('ZIP / Postal Code') }}</label>
+                        <input type="text" name="company_zipcode" class="ps-input"
+                            value="{{ $settings['company_zipcode'] ?? '' }}"
+                            placeholder="10001">
+                    </div>
+                    <div>
+                        <label class="ps-label">{{ __('Country') }}</label>
+                        <input type="text" name="company_country" class="ps-input"
+                            value="{{ $settings['company_country'] ?? '' }}"
+                            placeholder="{{ __('Country') }}">
+                    </div>
+                </div>
+
+                <div class="ps-divider"></div>
+
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Registration Number') }}</label>
+                    <input type="text" name="registration_number" class="ps-input"
+                        value="{{ $settings['registration_number'] ?? '' }}"
+                        placeholder="{{ __('Business registration number') }}">
+                </div>
+
+                {{-- VAT / GST Toggle --}}
+                <div class="ps-toggle-row ps-field">
+                    <label class="ps-switch">
+                        <input type="checkbox" name="vat_gst_number_switch" value="on"
+                            {{ (isset($settings['vat_gst_number_switch']) && $settings['vat_gst_number_switch'] == 'on') ? 'checked' : '' }}
+                            onchange="toggleVat(this)">
+                        <span class="ps-slider"></span>
+                    </label>
+                    <label>{{ __('Show VAT / GST Number on documents') }}</label>
+                </div>
+
+                <div id="vat-fields" style="{{ (isset($settings['vat_gst_number_switch']) && $settings['vat_gst_number_switch'] == 'on') ? '' : 'display:none;' }}">
+                    <div class="ps-input-grid ps-field">
+                        <div>
+                            <label class="ps-label">{{ __('Tax Type') }} <small style="text-transform:none;font-weight:500;">(e.g. VAT, GST)</small></label>
+                            <input type="text" name="tax_type" class="ps-input"
+                                value="{{ $settings['tax_type'] ?? '' }}"
+                                placeholder="VAT">
+                        </div>
+                        <div>
+                            <label class="ps-label">{{ __('VAT / GST Number') }}</label>
+                            <input type="text" name="vat_number" class="ps-input"
+                                value="{{ $settings['vat_number'] ?? '' }}"
+                                placeholder="GB123456789">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="ps-divider"></div>
+
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Footer Title') }}</label>
+                    <input type="text" name="footer_title" class="ps-input"
+                        value="{{ $settings['footer_title'] ?? '' }}"
+                        placeholder="{{ __('e.g. Thank you for your business!') }}">
+                </div>
+
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Footer Notes') }}</label>
+                    <textarea name="footer_notes" class="ps-input" rows="3"
+                        placeholder="{{ __('Payment terms, bank details, or any notes...') }}" style="height:auto;resize:vertical;">{{ $settings['footer_notes'] ?? '' }}</textarea>
+                </div>
+
+                <button type="submit" class="ps-save-sm">
+                    <i class="ti ti-device-floppy"></i> {{ __('Save Company Info') }}
+                </button>
+            </form>
+        </div>
+    </div>
 
     {{-- ── Tab Navigation ── --}}
     <div class="ps-tabs">
