@@ -1,390 +1,387 @@
 @php
     $settings_data = \App\Models\Utility::settingsById($proposal->created_by);
-
+    $accentHex = ltrim($color, '#');
+    $r = hexdec(substr($accentHex,0,2));
+    $g = hexdec(substr($accentHex,2,2));
+    $b = hexdec(substr($accentHex,4,2));
+    $lum = (0.299*$r + 0.587*$g + 0.114*$b) / 255;
+    $onAccent    = ($lum > 0.55) ? '#1e293b' : '#ffffff';
+    $accentFull  = '#' . $accentHex;
+    $accentLight = 'rgba(' . $r . ',' . $g . ',' . $b . ',0.08)';
+    $accentMid   = 'rgba(' . $r . ',' . $g . ',' . $b . ',0.18)';
 @endphp
-    <!DOCTYPE html>
-<html lang="en" dir="{{$settings_data['SITE_RTL'] == 'on'?'rtl':''}}">
-
+<!DOCTYPE html>
+<html lang="en" dir="{{ $settings_data['SITE_RTL'] == 'on' ? 'rtl' : '' }}">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="https://fonts.googleapis.com/css2?family=Lato:ital,wght@0,100;0,300;0,400;0,700;0,900;1,100;1,300;1,400;1,700;1,900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <style type="text/css">
         :root {
-            --theme-color: {{$color}};
-            --white: #ffffff;
-            --black: #000000;
+            --accent:       {{ $accentFull }};
+            --on-accent:    {{ $onAccent }};
+            --accent-light: {{ $accentLight }};
+            --accent-mid:   {{ $accentMid }};
+            --text-dark:    #0f172a;
+            --text-mid:     #475569;
+            --text-light:   #94a3b8;
+            --border:       #e2e8f0;
+            --bg:           #f8fafc;
+            --white:        #ffffff;
         }
 
         body {
-            font-family: 'Lato', sans-serif;
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text-dark);
+            font-size: 13px;
+            line-height: 1.6;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
-        p,
-        li,
-        ul,
-        ol {
-            margin: 0;
-            padding: 0;
-            list-style: none;
-            line-height: 1.5;
+        .doc-wrap {
+            max-width: 780px;
+            margin: 24px auto;
+            background: var(--white);
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 32px rgba(15,23,42,.10);
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        /* ── Header ── */
+        .doc-header {
+            background: var(--accent);
+            color: var(--on-accent);
+            padding: 36px 40px 28px;
         }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
+        .doc-header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
         }
-
-        table tr th {
-            padding: 0.75rem;
-            text-align: left;
-        }
-
-        table tr td {
-            padding: 0.75rem;
-            text-align: left;
-        }
-
-        table th small {
-            display: block;
-            font-size: 12px;
-        }
-
-        .proposal-preview-main {
-            max-width: 700px;
-            width: 100%;
-            margin: 0 auto;
-            background: #ffff;
-            box-shadow: 0 0 10px #ddd;
-        }
-
-        .proposal-logo {
-            max-width: 200px;
-            width: 100%;
-        }
-
-        .proposal-header table td {
-            padding: 15px 30px;
-        }
-
-        .text-right {
+        .doc-logo { max-width: 160px; max-height: 60px; object-fit: contain; }
+        .doc-title {
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+            opacity: .95;
             text-align: right;
         }
+        .doc-header-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 24px;
+            gap: 20px;
+        }
+        .doc-from p { font-size: 12.5px; opacity: .88; line-height: 1.7; }
+        .doc-from strong { font-size: 14px; font-weight: 700; display: block; margin-bottom: 4px; }
+        .doc-meta-table { border-collapse: collapse; min-width: 220px; }
+        .doc-meta-table td { padding: 3px 0; font-size: 12.5px; opacity: .88; }
+        .doc-meta-table td:first-child { padding-right: 16px; white-space: nowrap; font-weight: 500; }
+        .doc-meta-table td:last-child  { text-align: right; font-weight: 600; }
+        .doc-qr {
+            background: rgba(255,255,255,.15);
+            border-radius: 10px;
+            padding: 8px;
+            width: 80px; height: 80px;
+            flex-shrink: 0;
+        }
+        .doc-qr img { width: 100%; height: 100%; }
 
-        .no-space tr td {
-            padding: 0;
+        /* ── Body ── */
+        .doc-body { padding: 32px 40px; }
+
+        .doc-addresses { display: flex; gap: 20px; margin-bottom: 28px; }
+        .doc-address-box {
+            flex: 1;
+            background: var(--accent-light);
+            border: 1px solid var(--accent-mid);
+            border-radius: 12px;
+            padding: 16px 18px;
+        }
+        .doc-address-box .addr-label {
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .1em;
+            color: var(--accent);
+            margin-bottom: 8px;
+        }
+        .doc-address-box p { font-size: 12.5px; color: var(--text-mid); line-height: 1.7; }
+        .doc-address-box strong { font-size: 13.5px; font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 3px; }
+
+        /* ── Items Table ── */
+        .doc-table { width: 100%; border-collapse: collapse; }
+        .doc-table thead tr { background: var(--accent); color: var(--on-accent); }
+        .doc-table thead th {
+            padding: 11px 14px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .07em;
             white-space: nowrap;
         }
+        .doc-table thead th:first-child { border-radius: 8px 0 0 0; }
+        .doc-table thead th:last-child  { border-radius: 0 8px 0 0; text-align: right; }
+        .doc-table tbody tr { border-bottom: 1px solid var(--border); }
+        .doc-table tbody tr:hover { background: var(--accent-light); }
+        .doc-table tbody td { padding: 11px 14px; font-size: 12.5px; color: var(--text-mid); vertical-align: top; }
+        .doc-table tbody td:first-child { color: var(--text-dark); font-weight: 500; }
+        .doc-table tbody td:last-child  { text-align: right; font-weight: 600; color: var(--text-dark); }
+        .doc-table .item-desc td { padding-top: 0; padding-bottom: 10px; font-size: 11.5px; color: var(--text-light); font-style: italic; border-bottom: none; }
+        .doc-table tfoot tr:first-child td { border-top: 2px solid var(--accent); padding-top: 10px; }
+        .doc-table tfoot td { padding: 8px 14px; font-size: 12.5px; font-weight: 600; color: var(--text-mid); }
+        .doc-table tfoot td:last-child { text-align: right; color: var(--text-dark); }
 
-
-        .vertical-align-top td {
-            vertical-align: top;
+        /* ── Totals ── */
+        .doc-totals-wrap { display: flex; justify-content: flex-end; border-top: 1px solid var(--border); }
+        .doc-totals { width: 280px; padding: 20px 0 0; }
+        .doc-totals-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            font-size: 12.5px;
+            color: var(--text-mid);
+            border-bottom: 1px dashed var(--border);
         }
-
-        .view-qrcode {
-            max-width: 139px;
-            height: 139px;
-            width: 100%;
-            margin-left: auto;
-            margin-top: 15px;
-            background: var(--white);
-            padding: 13px;
+        .doc-totals-row:last-child { border-bottom: none; }
+        .doc-totals-row span:last-child { font-weight: 600; color: var(--text-dark); }
+        .doc-totals-row.grand {
+            margin-top: 8px;
+            padding: 10px 14px;
+            background: var(--accent);
+            color: var(--on-accent);
             border-radius: 10px;
+            font-size: 14px;
+            font-weight: 800;
+            border-bottom: none;
         }
+        .doc-totals-row.grand span:last-child { color: var(--on-accent); font-weight: 800; }
 
-        .view-qrcode img {
-            width: 100%;
-            height: 100%;
+        /* ── Footer ── */
+        .doc-footer {
+            margin-top: 32px;
+            padding: 20px 24px;
+            background: var(--accent-light);
+            border: 1px solid var(--accent-mid);
+            border-radius: 12px;
+            font-size: 12px;
+            color: var(--text-mid);
         }
+        .doc-footer strong { display: block; font-size: 13px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; }
 
-        .proposal-body {
-            padding: 30px 25px 0;
-        }
+        /* ── RTL ── */
+        html[dir="rtl"] .doc-title { text-align: left; }
+        html[dir="rtl"] .doc-meta-table td:last-child { text-align: left; }
+        html[dir="rtl"] .doc-table thead th:first-child { border-radius: 0 8px 0 0; }
+        html[dir="rtl"] .doc-table thead th:last-child  { border-radius: 8px 0 0 0; text-align: left; }
+        html[dir="rtl"] .doc-table tbody td:last-child  { text-align: left; }
+        html[dir="rtl"] .doc-table tfoot td:last-child  { text-align: left; }
+        html[dir="rtl"] .doc-totals { margin-left: 0; margin-right: auto; }
 
-
-
-        table.add-border tr {
-            border-top: 1px solid var(--theme-color);
-        }
-
-        tfoot tr:first-of-type {
-            border-bottom: 1px solid var(--theme-color);
-        }
-
-        .total-table tr:first-of-type td {
-            padding-top: 0;
-        }
-
-        .total-table tr:first-of-type {
-            border-top: 0;
-        }
-
-        .sub-total {
-            padding-right: 0;
-            padding-left: 0;
-        }
-
-        .border-0 {
-            border: none !important;
-        }
-
-        .proposal-summary td,
-        .proposal-summary th {
-            font-size: 13px;
-            font-weight: 600;
-        }
-
-        .total-table td:last-of-type {
-            width: 146px;
-        }
-
-        .proposal-footer {
-            padding: 15px 20px;
-        }
-
-        .itm-description td {
-            padding-top: 0;
-        }
-        html[dir="rtl"] table tr td,
-        html[dir="rtl"] table tr th{
-            text-align: right;
-        }
-        html[dir="rtl"]  .text-right{
-            text-align: left;
-        }
-        html[dir="rtl"] .view-qrcode{
-            margin-left: 0;
-            margin-right: auto;
+        @media print {
+            body { background: white; }
+            .doc-wrap { box-shadow: none; margin: 0; border-radius: 0; }
         }
     </style>
-
-    @if($settings_data['SITE_RTL']=='on')
+    @if($settings_data['SITE_RTL'] == 'on')
         <link rel="stylesheet" href="{{ asset('css/bootstrap-rtl.css') }}">
     @endif
 </head>
+<body>
+<div class="doc-wrap" id="boxes">
 
-<body class="">
-<div class="proposal-preview-main"  id="boxes">
-    <div class="proposal-header" style="background: {{$color}};color:{{$font_color}}">
-        <table>
-            <tbody>
-            <tr>
-                <td>
-                    <img class="proposal-logo" src="{{$img}}" alt="">
-                </td>
-                <td class="text-right">
-                    <h3 style="text-transform: uppercase; font-size: 40px; font-weight: bold;">{{__('PROPOSAL')}}</h3>
-                </td>
-            </tr>
-            </tbody>
-        </table>
-        <table class="vertical-align-top">
-            <tbody>
-            <tr>
-                <td>
-                    <p>
-                        @if($settings['company_name']){{$settings['company_name']}}@endif<br>
-                        @if($settings['mail_from_address']){{$settings['mail_from_address']}}@endif<br><br><br>
-                        @if($settings['company_address']){{$settings['company_address']}}@endif
-                        @if($settings['company_city']) <br> {{$settings['company_city']}}, @endif
-                        @if($settings['company_state']){{$settings['company_state']}}@endif
-                        @if($settings['company_zipcode']) - {{$settings['company_zipcode']}}@endif
-                        @if($settings['company_country']) <br>{{$settings['company_country']}}@endif
-                        @if($settings['company_telephone']){{$settings['company_telephone']}}@endif<br>
-                        @if(!empty($settings['registration_number'])){{__('Registration Number')}} : {{$settings['registration_number']}} @endif<br>
-                        @if($settings['vat_gst_number_switch'] == 'on')
-                            @if(!empty($settings['tax_type']) && !empty($settings['vat_number'])){{$settings['tax_type'].' '. __('Number')}} : {{$settings['vat_number']}} <br>@endif
-                        @endif
-                    </p>
-                </td>
-                <td>
-                    <table class="no-space" style="width: 45%;margin-left: auto;">
-                        <tbody>
-                        <tr>
-                            <td>{{__('Number')}}:</td>
-                            <td class="text-right">{{Utility::proposalNumberFormat($settings,$proposal->proposal_id)}}</td>
-                        </tr>
-                        <tr>
-                            <td>{{__('Issue Date')}}:</td>
-                            <td class="text-right">{{Utility::dateFormat($settings,$proposal->issue_date)}}</td>
-                        </tr>
-
-
-                        @if(!empty($customFields) && count($proposal->customField)>0)
-                            @foreach($customFields as $field)
-                                <tr>
-                                    <td>{{$field->name}} :</td>
-                                    <td> {{!empty($proposal->customField)?$proposal->customField[$field->id]:'-'}}</td>
-                                </tr>
-                            @endforeach
-                        @endif
-                        <tr>
-                            <td colspan="2">
-                                <div class="view-qrcode">
-                                    {!! DNS2D::getBarcodeHTML(route('proposal.link.copy',\Crypt::encrypt($proposal->proposal_id)), "QRCODE",2,2) !!}
-                                </div>
-                            </td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </td>
-            </tr>
-            </tbody>
-        </table>
-    </div>
-    <div class="proposal-body">
-        <table>
-            <tbody>
-            <tr>
-                <td>
-                    <strong style="margin-bottom: 10px; display:block;">{{__('Bill To')}}:</strong>
-                    @if(!empty($customer->billing_name))
-                        <p>
-                            {{!empty($customer->billing_name)?$customer->billing_name:''}}<br>
-                            {{!empty($customer->billing_address)?$customer->billing_address:''}}<br>
-                            {{!empty($customer->billing_city)?$customer->billing_city:'' .', '}}<br>
-                            {{!empty($customer->billing_state)?$customer->billing_state:'',', '}},
-                            {{!empty($customer->billing_zip)?$customer->billing_zip:''}}<br>
-                            {{!empty($customer->billing_country)?$customer->billing_country:''}}<br>
-                            {{!empty($customer->billing_phone)?$customer->billing_phone:''}}<br>
-                        </p>
-                    @else
-                        -
-                    @endif
-                </td>
-                @if($settings['shipping_display']=='on')
-                    <td class="text-right">
-                        <strong style="margin-bottom: 10px; display:block;">{{__('Ship To')}}:</strong>
-                        @if(!empty($customer->shipping_name))
-                            <p>
-                                {{!empty($customer->shipping_name)?$customer->shipping_name:''}}<br>
-                                {{!empty($customer->shipping_address)?$customer->shipping_address:''}}<br>
-                                {{!empty($customer->shipping_city)?$customer->shipping_city:'' . ', '}}<br>
-                                {{!empty($customer->shipping_state)?$customer->shipping_state:'' .', '}},
-                                {{!empty($customer->shipping_zip)?$customer->shipping_zip:''}}<br>
-                                {{!empty($customer->shipping_country)?$customer->shipping_country:''}}<br>
-                                {{!empty($customer->shipping_phone)?$customer->shipping_phone:''}}<br>
-                            </p>
-                        @else
-                            -
-                        @endif
-                    </td>
-                @endif
-            </tr>
-            </tbody>
-        </table>
-        <table class="add-border proposal-summary" style="margin-top: 30px;">
-            <thead style="background: {{$color}};color:{{$font_color}}">
-            <tr>
-                <th>{{__('Item')}}</th>
-                <th>{{__('Quantity')}}</th>
-                <th>{{__('Rate')}}</th>
-                <th>{{__('Discount')}}</th>
-                <th>{{__('Tax')}} (%)</th>
-                <th>{{__('Price')}} <small>{{__('after tax & discount')}}</small></th>
-            </tr>
-            </thead>
-            <tbody>
-            @if(isset($proposal->itemData) && count($proposal->itemData) > 0)
-                @foreach($proposal->itemData as $key => $item)
+    {{-- ── Header ── --}}
+    <div class="doc-header">
+        <div class="doc-header-top">
+            <img class="doc-logo" src="{{ $img }}" alt="Logo">
+            <div class="doc-title">{{ __('PROPOSAL') }}</div>
+        </div>
+        <div class="doc-header-bottom">
+            <div class="doc-from">
+                <strong>@if($settings['company_name']){{ $settings['company_name'] }}@endif</strong>
+                <p>
+                    @if($settings['mail_from_address']){{ $settings['mail_from_address'] }}<br>@endif
+                    @if($settings['company_address']){{ $settings['company_address'] }}@endif
+                    @if($settings['company_city']), {{ $settings['company_city'] }}@endif
+                    @if($settings['company_state']) {{ $settings['company_state'] }}@endif
+                    @if($settings['company_zipcode']) – {{ $settings['company_zipcode'] }}@endif
+                    @if($settings['company_country'])<br>{{ $settings['company_country'] }}@endif
+                    @if($settings['company_telephone'])<br>{{ $settings['company_telephone'] }}@endif
+                    @if(!empty($settings['registration_number']))<br>{{ __('Reg No') }}: {{ $settings['registration_number'] }}@endif
+                    @if($settings['vat_gst_number_switch'] == 'on' && !empty($settings['tax_type']) && !empty($settings['vat_number']))<br>{{ $settings['tax_type'] }} {{ __('No') }}: {{ $settings['vat_number'] }}@endif
+                </p>
+            </div>
+            <div style="display:flex;align-items:flex-end;gap:16px;">
+                <table class="doc-meta-table">
                     <tr>
-                        <td>{{$item->name}}</td>
-                        @php
-                        $unit = $item->unit;
-                        $unitName = App\Models\ProductServiceUnit::find($unit);
-                    @endphp
-                    
-                    <td>{{$item->quantity}} {{ ($unitName != null) ?  '('. $unitName->name .')' : ''}}</td>
-                        <td>{{Utility::priceFormat($settings,$item->price)}}</td>
-                        <td>{{($item->discount!=0)?Utility::priceFormat($settings,$item->discount):'-'}}</td>
-                        @php
-                            $itemtax = 0;
-                        @endphp
-                        <td>
-                            @if(!empty($item->itemTax))
-
-                                @foreach($item->itemTax as $taxes)
-                                    @php
-                                        $itemtax += $taxes['tax_price'];
-                                    @endphp
-                                    <p>{{$taxes['name']}} ({{$taxes['rate']}}) {{$taxes['price']}}</p>
-                                @endforeach
-                            @else
-                                <span>-</span>
-                            @endif
-                        </td>
-                        <td>{{Utility::priceFormat($settings,$item->price * $item->quantity -  $item->discount + $itemtax)}}</td>
-                    @if(!empty($item->description))
-                        <tr class="border-0 itm-description ">
-                            <td colspan="6">{{$item->description}}</td>
-                        </tr>
-                        @endif
-                        </tr>
-                        @endforeach
-                    @else
-                    @endif
-
-            </tbody>
-            <tfoot>
-            <tr>
-                <td>{{__('Total')}}</td>
-                <td>{{$proposal->totalQuantity}}</td>
-                <td>{{Utility::priceFormat($settings,$proposal->totalRate)}}</td>
-                <td>{{Utility::priceFormat($settings,$proposal->totalDiscount)}}</td>
-                <td>{{Utility::priceFormat($settings,$proposal->totalTaxPrice) }}</td>
-                <td>{{Utility::priceFormat($settings,$proposal->getSubTotal())}}</td>
-            </tr>
-            <tr>
-                <td colspan="4"></td>
-                <td colspan="2" class="sub-total">
-                    <table class="total-table">
-                        <tr>
-                            <td>{{__('Subtotal')}}:</td>
-                            <td>{{Utility::priceFormat($settings,$proposal->getSubTotal())}}</td>
-                        </tr>
-                        @if($proposal->getTotalDiscount())
+                        <td>{{ __('Proposal No') }}:</td>
+                        <td>{{ Utility::proposalNumberFormat($settings, $proposal->proposal_id) }}</td>
+                    </tr>
+                    <tr>
+                        <td>{{ __('Issue Date') }}:</td>
+                        <td>{{ Utility::dateFormat($settings, $proposal->issue_date) }}</td>
+                    </tr>
+                    @if(!empty($customFields) && count($proposal->customField) > 0)
+                        @foreach($customFields as $field)
                             <tr>
-                                <td>{{__('Discount')}}:</td>
-                                <td>{{Utility::priceFormat($settings,$proposal->getTotalDiscount())}}</td>
+                                <td>{{ $field->name }}:</td>
+                                <td>{{ !empty($proposal->customField) ? $proposal->customField[$field->id] : '-' }}</td>
                             </tr>
-                        @endif
-                        @if(!empty($proposal->taxesData))
-                            @foreach($proposal->taxesData as $taxName => $taxPrice)
-                                <tr>
-                                    <td>{{$taxName}} :</td>
-                                    <td>{{ Utility::priceFormat($settings,$taxPrice)  }}</td>
-                                </tr>
-                            @endforeach
-                        @endif
-                        <tr>
-                            <td>{{__('Total')}}:</td>
-                            <td>{{Utility::priceFormat($settings,$proposal->getSubTotal()-$proposal->getTotalDiscount()+$proposal->getTotalTax())}}</td>
-                        </tr>
-
-
-                    </table>
-                </td>
-            </tr>
-            </tfoot>
-        </table>
-        <div class="proposal-footer">
-            <b>{{$settings['footer_title']}}</b> <br>
-            {!! $settings['footer_notes'] !!}
+                        @endforeach
+                    @endif
+                </table>
+                <div class="doc-qr">
+                    {!! DNS2D::getBarcodeHTML(route('proposal.link.copy', \Crypt::encrypt($proposal->proposal_id)), "QRCODE", 2, 2) !!}
+                </div>
+            </div>
         </div>
     </div>
 
+    {{-- ── Body ── --}}
+    <div class="doc-body">
+
+        {{-- Addresses --}}
+        <div class="doc-addresses">
+            <div class="doc-address-box">
+                <div class="addr-label">{{ __('Bill To') }}</div>
+                @if(!empty($customer->billing_name))
+                    <strong>{{ $customer->billing_name }}</strong>
+                    <p>
+                        @if($customer->billing_address){{ $customer->billing_address }}<br>@endif
+                        @if($customer->billing_city){{ $customer->billing_city }}@endif
+                        @if($customer->billing_state), {{ $customer->billing_state }}@endif
+                        @if($customer->billing_zip) {{ $customer->billing_zip }}@endif
+                        @if($customer->billing_country)<br>{{ $customer->billing_country }}@endif
+                        @if($customer->billing_phone)<br>{{ $customer->billing_phone }}@endif
+                    </p>
+                @else
+                    <p>—</p>
+                @endif
+            </div>
+            @if($settings['shipping_display'] == 'on')
+            <div class="doc-address-box">
+                <div class="addr-label">{{ __('Ship To') }}</div>
+                @if(!empty($customer->shipping_name))
+                    <strong>{{ $customer->shipping_name }}</strong>
+                    <p>
+                        @if($customer->shipping_address){{ $customer->shipping_address }}<br>@endif
+                        @if($customer->shipping_city){{ $customer->shipping_city }}@endif
+                        @if($customer->shipping_state), {{ $customer->shipping_state }}@endif
+                        @if($customer->shipping_zip) {{ $customer->shipping_zip }}@endif
+                        @if($customer->shipping_country)<br>{{ $customer->shipping_country }}@endif
+                        @if($customer->shipping_phone)<br>{{ $customer->shipping_phone }}@endif
+                    </p>
+                @else
+                    <p>—</p>
+                @endif
+            </div>
+            @endif
+        </div>
+
+        {{-- Items Table --}}
+        <table class="doc-table">
+            <thead>
+                <tr>
+                    <th>{{ __('Item') }}</th>
+                    <th>{{ __('Qty') }}</th>
+                    <th>{{ __('Rate') }}</th>
+                    <th>{{ __('Discount') }}</th>
+                    <th>{{ __('Tax') }}</th>
+                    <th>{{ __('Amount') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if(isset($proposal->itemData) && count($proposal->itemData) > 0)
+                    @foreach($proposal->itemData as $item)
+                        @php
+                            $unitName = App\Models\ProductServiceUnit::find($item->unit);
+                            $itemtax  = 0;
+                        @endphp
+                        <tr>
+                            <td>{{ $item->name }}</td>
+                            <td>{{ $item->quantity }}{{ $unitName ? ' ('.$unitName->name.')' : '' }}</td>
+                            <td>{{ Utility::priceFormat($settings, $item->price) }}</td>
+                            <td>{{ $item->discount != 0 ? Utility::priceFormat($settings, $item->discount) : '—' }}</td>
+                            <td>
+                                @if(!empty($item->itemTax))
+                                    @foreach($item->itemTax as $taxes)
+                                        @php $itemtax += $taxes['tax_price']; @endphp
+                                        <div>{{ $taxes['name'] }} ({{ $taxes['rate'] }}) {{ $taxes['price'] }}</div>
+                                    @endforeach
+                                @else —
+                                @endif
+                            </td>
+                            <td>{{ Utility::priceFormat($settings, $item->price * $item->quantity - $item->discount + $itemtax) }}</td>
+                        </tr>
+                        @if(!empty($item->description))
+                            <tr class="item-desc">
+                                <td colspan="6">{{ $item->description }}</td>
+                            </tr>
+                        @endif
+                    @endforeach
+                @endif
+            </tbody>
+            <tfoot>
+                <tr>
+                    <td>{{ __('Totals') }}</td>
+                    <td>{{ $proposal->totalQuantity }}</td>
+                    <td>{{ Utility::priceFormat($settings, $proposal->totalRate) }}</td>
+                    <td>{{ Utility::priceFormat($settings, $proposal->totalDiscount) }}</td>
+                    <td>{{ Utility::priceFormat($settings, $proposal->totalTaxPrice) }}</td>
+                    <td>{{ Utility::priceFormat($settings, $proposal->getSubTotal()) }}</td>
+                </tr>
+            </tfoot>
+        </table>
+
+        {{-- Totals Summary --}}
+        <div class="doc-totals-wrap">
+            <div class="doc-totals">
+                <div class="doc-totals-row">
+                    <span>{{ __('Subtotal') }}</span>
+                    <span>{{ Utility::priceFormat($settings, $proposal->getSubTotal()) }}</span>
+                </div>
+                @if($proposal->getTotalDiscount())
+                <div class="doc-totals-row">
+                    <span>{{ __('Discount') }}</span>
+                    <span>– {{ Utility::priceFormat($settings, $proposal->getTotalDiscount()) }}</span>
+                </div>
+                @endif
+                @if(!empty($proposal->taxesData))
+                    @foreach($proposal->taxesData as $taxName => $taxPrice)
+                    <div class="doc-totals-row">
+                        <span>{{ $taxName }}</span>
+                        <span>{{ Utility::priceFormat($settings, $taxPrice) }}</span>
+                    </div>
+                    @endforeach
+                @endif
+                <div class="doc-totals-row grand">
+                    <span>{{ __('Total') }}</span>
+                    <span>{{ Utility::priceFormat($settings, $proposal->getSubTotal() - $proposal->getTotalDiscount() + $proposal->getTotalTax()) }}</span>
+                </div>
+            </div>
+        </div>
+
+        {{-- Footer Notes --}}
+        @if($settings['footer_title'] || $settings['footer_notes'])
+        <div class="doc-footer">
+            @if($settings['footer_title'])<strong>{{ $settings['footer_title'] }}</strong>@endif
+            {!! $settings['footer_notes'] !!}
+        </div>
+        @endif
+
+    </div>
 </div>
+
 @if(!isset($preview))
-    @include('proposal.script');
+    @include('proposal.script')
 @endif
-
 </body>
-
 </html>
