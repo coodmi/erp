@@ -14,15 +14,14 @@ var _psAgents    = {!! json_encode($agents) !!};
 
 var _psSelectedParty = null; // { id, name, email, partyType: 'agent'|'client'|'vendor' }
 
-// ── template/color live preview ──
-$(document).on('change', "select[name='invoice_template'], input[name='invoice_color']", function () {
+// ── color live preview ──
+$(document).on('change', "input[name='invoice_color']", function () {
     refreshPreview();
 });
 
 function refreshPreview() {
-    var template = $("select[name='invoice_template']").val();
-    var color    = $("input[name='invoice_color']:checked").val() || 'ffffff';
-    var src      = '{{ url("/invoices/preview") }}/' + template + '/' + color;
+    var color = $("input[name='invoice_color']:checked").val() || 'ffffff';
+    var src   = '{{ url("/invoices/preview") }}/template1/' + color;
     document.getElementById('invoice_frame').src = src;
 }
 
@@ -321,21 +320,14 @@ function updatePartyDropdown() {
             <div class="ps-card-icon green"><i class="ti ti-file-invoice"></i></div>
             <div>
                 <p class="ps-card-title">{{ __('Invoice Settings') }}</p>
-                <p class="ps-card-sub">{{ __('Template & branding') }}</p>
+                <p class="ps-card-sub">{{ __('Color & branding') }}</p>
             </div>
         </div>
         <div class="ps-card-body">
             <form method="post" action="{{ route('template.setting') }}" enctype="multipart/form-data">
                 @csrf
-                <div class="ps-field">
-                    <label class="ps-label">{{ __('Template') }}</label>
-                    <select class="ps-select" name="invoice_template" onchange="refreshPreview()">
-                        @foreach(App\Models\Utility::templateData()['templates'] as $key => $template)
-                            <option value="{{ $key }}" {{ (isset($settings['invoice_template']) && $settings['invoice_template'] == $key) ? 'selected' : '' }}>{{ $template }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="ps-divider"></div>
+                {{-- hidden template field so save still works --}}
+                <input type="hidden" name="invoice_template" value="{{ $settings['invoice_template'] ?? 'template1' }}">
                 <div class="ps-field">
                     <label class="ps-label">{{ __('Color Theme') }}</label>
                     <div class="ps-swatches">
