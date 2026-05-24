@@ -70,8 +70,8 @@ function toggleSection(bodyId, header) {
 // ══════════════════════════════════════════════
 // QUICK LAUNCHER
 // ══════════════════════════════════════════════
-var _qlCustomers = @json($customers->map(fn($c) => ['id'=>$c->id,'name'=>$c->name,'email'=>$c->email??'','contact'=>$c->contact??'']));
-var _qlVendors   = @json($vendors->map(fn($v) => ['id'=>$v->id,'name'=>$v->name,'email'=>$v->email??'','contact'=>$v->contact??'']));
+var _qlCustomers = {!! json_encode($customers) !!};
+var _qlVendors   = {!! json_encode($vendors) !!};
 var _qlSelectedDoc  = null;
 var _qlSelectedType = 'customer';
 
@@ -200,8 +200,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ── Recipient Address ──
-var _customerOptions = @json($customers->map(fn($c) => ['id'=>$c->id,'name'=>$c->name,'email'=>$c->email??'']));
-var _vendorOptions   = @json($vendors->map(fn($v) => ['id'=>$v->id,'name'=>$v->name,'email'=>$v->email??'']));
+var _customerOptions = {!! json_encode($customers) !!};
+var _vendorOptions   = {!! json_encode($vendors) !!};
 
 function clearRecipientForm() {
     document.getElementById('recipientSelect').innerHTML = '<option value="">— {{ __("Choose one") }} —</option>';
@@ -910,8 +910,8 @@ function saveRecipientAddress() {
                     <select id="ql_client" class="ps-select" onchange="qlLoadClientInfo()">
                         <option value="">— {{ __('Choose client') }} —</option>
                         @foreach($customers as $c)
-                            <option value="{{ $c->id }}" data-type="customer">
-                                {{ $c->name }}@if($c->email) · {{ $c->email }}@endif
+                            <option value="{{ $c['id'] }}" data-type="customer">
+                                {{ $c['name'] }}@if($c['email']) · {{ $c['email'] }}@endif
                             </option>
                         @endforeach
                     </select>
@@ -1022,7 +1022,7 @@ function saveRecipientAddress() {
                     <select id="recipientSelect" class="ps-select" onchange="loadRecipient(this.value)">
                         <option value="">— {{ __('Choose one') }} —</option>
                         @foreach($customers as $c)
-                            <option value="{{ $c->id }}" data-type="customer">{{ $c->name }}@if($c->email) ({{ $c->email }})@endif</option>
+                            <option value="{{ $c['id'] }}" data-type="customer">{{ $c['name'] }}@if($c['email']) ({{ $c['email'] }})@endif</option>
                         @endforeach
                     </select>
                 </div>

@@ -968,10 +968,28 @@ class SystemController extends Controller
         if(\Auth::user()->can('manage print settings'))
         {
             $settings  = Utility::settings();
+
             $customers = \App\Models\Customer::where('created_by', \Auth::user()->creatorId())
-                            ->select('id','name','email','contact')->orderBy('name')->get();
-            $vendors   = \App\Models\Vender::where('created_by', \Auth::user()->creatorId())
-                            ->select('id','name','email','contact')->orderBy('name')->get();
+                            ->select('id','name','email','contact')->orderBy('name')->get()
+                            ->map(function($c) {
+                                return [
+                                    'id'      => $c->id,
+                                    'name'    => $c->name,
+                                    'email'   => $c->email ?? '',
+                                    'contact' => $c->contact ?? '',
+                                ];
+                            })->values();
+
+            $vendors = \App\Models\Vender::where('created_by', \Auth::user()->creatorId())
+                            ->select('id','name','email','contact')->orderBy('name')->get()
+                            ->map(function($v) {
+                                return [
+                                    'id'      => $v->id,
+                                    'name'    => $v->name,
+                                    'email'   => $v->email ?? '',
+                                    'contact' => $v->contact ?? '',
+                                ];
+                            })->values();
 
             return view('settings.print', compact('settings', 'customers', 'vendors'));
         }
