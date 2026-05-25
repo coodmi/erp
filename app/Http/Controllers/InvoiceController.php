@@ -978,28 +978,94 @@ class InvoiceController extends Controller
         }
     }
 
-    public function previewInvoice($template, $color)
+    public function previewInvoice(Request $request, $template, $color)
     {
         $objUser  = \Auth::user();
         $settings = Utility::settings();
         $invoice  = new Invoice();
 
-        $customer                   = new \stdClass();
-        $customer->email            = '<Email>';
-        $customer->shipping_name    = '<Customer Name>';
-        $customer->shipping_country = '<Country>';
-        $customer->shipping_state   = '<State>';
-        $customer->shipping_city    = '<City>';
-        $customer->shipping_phone   = '<Customer Phone Number>';
-        $customer->shipping_zip     = '<Zip>';
-        $customer->shipping_address = '<Address>';
-        $customer->billing_name     = '<Customer Name>';
-        $customer->billing_country  = '<Country>';
-        $customer->billing_state    = '<State>';
-        $customer->billing_city     = '<City>';
-        $customer->billing_phone    = '<Customer Phone Number>';
-        $customer->billing_zip      = '<Zip>';
-        $customer->billing_address  = '<Address>';
+        // Load real party data if provided
+        $partyId   = $request->get('party_id');
+        $partyType = $request->get('party_type', 'customer'); // customer | vendor | agent
+
+        $customer = new \stdClass();
+
+        if ($partyId && in_array($partyType, ['customer', 'vendor', 'agent'])) {
+            if ($partyType === 'customer') {
+                $real = \App\Models\VClient::find($partyId);
+                if ($real) {
+                    $customer->billing_name    = $real->client_name ?? '';
+                    $customer->billing_address = '';
+                    $customer->billing_city    = '';
+                    $customer->billing_state   = '';
+                    $customer->billing_country = '';
+                    $customer->billing_zip     = '';
+                    $customer->billing_phone   = '';
+                    $customer->shipping_name    = $real->client_name ?? '';
+                    $customer->shipping_address = '';
+                    $customer->shipping_city    = '';
+                    $customer->shipping_state   = '';
+                    $customer->shipping_country = '';
+                    $customer->shipping_zip     = '';
+                    $customer->shipping_phone   = '';
+                }
+            } elseif ($partyType === 'vendor') {
+                $real = \App\Models\Vender::find($partyId);
+                if ($real) {
+                    $customer->billing_name    = $real->name ?? '';
+                    $customer->billing_address = $real->billing_address ?? '';
+                    $customer->billing_city    = $real->billing_city ?? '';
+                    $customer->billing_state   = $real->billing_state ?? '';
+                    $customer->billing_country = $real->billing_country ?? '';
+                    $customer->billing_zip     = $real->billing_zip ?? '';
+                    $customer->billing_phone   = $real->billing_phone ?? '';
+                    $customer->shipping_name    = $real->shipping_name ?? '';
+                    $customer->shipping_address = $real->shipping_address ?? '';
+                    $customer->shipping_city    = $real->shipping_city ?? '';
+                    $customer->shipping_state   = $real->shipping_state ?? '';
+                    $customer->shipping_country = $real->shipping_country ?? '';
+                    $customer->shipping_zip     = $real->shipping_zip ?? '';
+                    $customer->shipping_phone   = $real->shipping_phone ?? '';
+                }
+            } elseif ($partyType === 'agent') {
+                $real = \App\Models\Agent::find($partyId);
+                if ($real) {
+                    $customer->billing_name    = $real->agent_name ?? '';
+                    $customer->billing_address = $real->address ?? '';
+                    $customer->billing_city    = '';
+                    $customer->billing_state   = '';
+                    $customer->billing_country = '';
+                    $customer->billing_zip     = '';
+                    $customer->billing_phone   = '';
+                    $customer->shipping_name    = $real->agent_name ?? '';
+                    $customer->shipping_address = '';
+                    $customer->shipping_city    = '';
+                    $customer->shipping_state   = '';
+                    $customer->shipping_country = '';
+                    $customer->shipping_zip     = '';
+                    $customer->shipping_phone   = '';
+                }
+            }
+        }
+
+        // Fallback placeholders if no real data
+        if (empty($customer->billing_name ?? '')) {
+            $customer->email            = '<Email>';
+            $customer->shipping_name    = '<Customer Name>';
+            $customer->shipping_country = '<Country>';
+            $customer->shipping_state   = '<State>';
+            $customer->shipping_city    = '<City>';
+            $customer->shipping_phone   = '<Customer Phone Number>';
+            $customer->shipping_zip     = '<Zip>';
+            $customer->shipping_address = '<Address>';
+            $customer->billing_name     = '<Customer Name>';
+            $customer->billing_country  = '<Country>';
+            $customer->billing_state    = '<State>';
+            $customer->billing_city     = '<City>';
+            $customer->billing_phone    = '<Customer Phone Number>';
+            $customer->billing_zip      = '<Zip>';
+            $customer->billing_address  = '<Address>';
+        }
 
         $totalTaxPrice = 0;
         $taxesData     = [];

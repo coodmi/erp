@@ -22,6 +22,10 @@ $(document).on('change', "input[name='invoice_color']", function () {
 function refreshPreview() {
     var color = $("input[name='invoice_color']:checked").val() || 'ffffff';
     var src   = '{{ url("/invoices/preview") }}/template1/' + color;
+    if (_psSelectedParty && _psSelectedParty.id) {
+        var apiType = _psSelectedParty.partyType === 'client' ? 'customer' : _psSelectedParty.partyType;
+        src += '?party_id=' + _psSelectedParty.id + '&party_type=' + apiType;
+    }
     document.getElementById('invoice_frame').src = src;
 }
 
@@ -531,7 +535,10 @@ function onPartySelect(id) {
     lbl.textContent = item.name;
     lbl.style.display = 'inline-block';
 
-    // if client or vendor — load address and update preview
+    // update preview iframe with party data
+    refreshPreview();
+
+    // if client or vendor — also load address for the info card
     if (type === 'client' || type === 'vendor') {
         var apiType = type === 'client' ? 'customer' : 'vendor';
         fetch('{{ route("print.recipient.data") }}?type=' + apiType + '&id=' + id, {
@@ -545,6 +552,8 @@ function onPartySelect(id) {
             if (data.billing_country) addr.push(data.billing_country);
             document.getElementById('ps_party_addr').textContent = addr.join(', ') || '{{ __("No address on file") }}';
         }).catch(function() {});
+    } else if (type === 'agent') {
+        document.getElementById('ps_party_addr').textContent = item.email ? item.email : '';
     }
 }
 
