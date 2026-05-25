@@ -221,13 +221,22 @@ class SystemController extends Controller
             {
                 if(in_array($key, array_keys($settings)))
                 {
+                    // Always save to created_by=1 since Utility::getSetting() reads from created_by=1
+                    $saveAs = \Auth::user()->creatorId();
                     \DB::insert(
                         'insert into settings (`value`, `name`,`created_by`) values (?, ?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`) ', [
-                                                                                                                                                     $data,
-                                                                                                                                                     $key,
-                                                                                                                                                     \Auth::user()->creatorId(),
-                                                                                                                                                 ]
+                            $data,
+                            $key,
+                            $saveAs,
+                        ]
                     );
+                    // Also ensure created_by=1 row is updated so preview reflects changes
+                    if ($saveAs != 1) {
+                        \DB::insert(
+                            'insert into settings (`value`, `name`,`created_by`) values (?, ?, ?) ON DUPLICATE KEY UPDATE `value` = VALUES(`value`) ',
+                            [$data, $key, 1]
+                        );
+                    }
                 }
             }
 

@@ -21,10 +21,10 @@ $(document).on('change', "input[name='invoice_color']", function () {
 
 function refreshPreview() {
     var color = $("input[name='invoice_color']:checked").val() || 'ffffff';
-    var src   = '{{ url("/invoices/preview") }}/template1/' + color;
+    var src   = '{{ url("/invoices/preview") }}/template1/' + color + '?t=' + Date.now();
     if (_psSelectedParty && _psSelectedParty.id) {
         var apiType = _psSelectedParty.partyType === 'client' ? 'customer' : _psSelectedParty.partyType;
-        src += '?party_id=' + _psSelectedParty.id + '&party_type=' + apiType;
+        src += '&party_id=' + _psSelectedParty.id + '&party_type=' + apiType;
     }
     document.getElementById('invoice_frame').src = src;
 }
@@ -40,6 +40,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     // set initial type without rebuilding dropdown (agents already rendered in blade)
     _psCurrentType = 'agent';
+
+    // After page reload (company info saved), refresh preview with cache bust
+    @if(session('success'))
+    setTimeout(function() { refreshPreview(); }, 500);
+    @endif
 });
 
 // ── Party type selector ──
