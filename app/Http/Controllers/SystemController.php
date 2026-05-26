@@ -1155,20 +1155,43 @@ class SystemController extends Controller
             return redirect()->back()->with('error', 'Permission denied.');
         }
 
-        $post = $request->all();
-        unset($post['_token']);
+        $post = $request->except([
+            '_token',
+            'receipt_logo',
+            'signature_cashier',
+            'signature_manager',
+            'signature_md',
+        ]);
 
-        // Handle receipt logo upload
-        if($request->hasFile('receipt_logo'))
-        {
+        $validation = ['mimes:png,jpg,jpeg', 'max:20480'];
+        $creatorId  = \Auth::user()->creatorId();
+
+        if ($request->hasFile('receipt_logo')) {
             $dir = 'receipt_logo/';
             $receipt_logo = \Auth::user()->id . '_receipt_logo.png';
-            $validation = ['mimes:png,jpg,jpeg', 'max:20480'];
             $path = Utility::upload_file($request, 'receipt_logo', $receipt_logo, $dir, $validation);
-            if($path['flag'] == 0) {
+            if ($path['flag'] == 0) {
                 return redirect()->back()->with('error', __($path['msg']));
             }
             $post['receipt_logo'] = $receipt_logo;
+        }
+
+        $signatureFields = [
+            'signature_cashier' => $creatorId . '_cashier',
+            'signature_manager' => $creatorId . '_manager',
+            'signature_md'        => $creatorId . '_md',
+        ];
+        foreach ($signatureFields as $field => $basename) {
+            if (!$request->hasFile($field)) {
+                continue;
+            }
+            $ext  = strtolower($request->file($field)->getClientOriginalExtension() ?: 'png');
+            $name = $basename . '.' . $ext;
+            $path = Utility::upload_file($request, $field, $name, 'signatures/', $validation);
+            if ($path['flag'] == 0) {
+                return redirect()->back()->with('error', __($path['msg']));
+            }
+            $post[$field] = $name;
         }
 
         foreach($post as $key => $data)

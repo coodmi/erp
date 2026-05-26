@@ -71,6 +71,7 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#0f172a;font-size:1
 .rc-sigs{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:8px}
 .rc-sig{text-align:center}
 .rc-sig-line{height:1px;background:#cbd5e1;margin:0 16px 8px}
+.rc-sig-img{max-height:64px;max-width:100%;width:auto;margin:0 auto 8px;display:block;object-fit:contain}
 .rc-sig p{font-size:11px;color:#64748b;font-weight:600}
 .rc-footer{background:{{ $headerBg }};padding:18px 36px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
 .rc-footer img{height:36px;filter:brightness(0) invert(1)}
@@ -175,11 +176,7 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#0f172a;font-size:1
     <div class="rc-notice">{{ $noticeText }}</div>
     @endif
 
-    <div class="rc-sigs">
-      <div class="rc-sig"><div class="rc-sig-line"></div><p>{{ __('Cashier Signature') }}</p></div>
-      <div class="rc-sig"><div class="rc-sig-line"></div><p>{{ __('Manager Signature') }}</p></div>
-      <div class="rc-sig"><div class="rc-sig-line"></div><p>{{ __('MD Signature & Seal') }}</p></div>
-    </div>
+    @include('partials.print-signatures', ['settings' => $settings ?? []])
 
     @if(!empty($footerText))
     <p style="text-align:center;font-size:11px;color:#64748b;margin-top:12px;">{{ $footerText }}</p>

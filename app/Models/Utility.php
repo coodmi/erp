@@ -180,6 +180,9 @@ class Utility extends Model
             "receipt_company_email" => "",
             "receipt_footer_text" => "",
             "receipt_notice_text" => "Money receipts will not be considered valid without the MD's seal and signature.",
+            "signature_cashier" => "",
+            "signature_manager" => "",
+            "signature_md" => "",
 
             "barcode_type" => "code128",
             "barcode_format" => "css",

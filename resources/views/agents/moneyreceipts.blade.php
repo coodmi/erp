@@ -80,6 +80,7 @@
         .sig-section { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; margin-top:8px; }
         .sig-box { text-align:center; }
         .sig-line { height:1px; background:#cbd5e1; margin:0 20px 10px; }
+        .sig-img { max-height:64px; max-width:100%; margin:0 auto 8px; display:block; object-fit:contain; }
         .sig-box p { font-size:.78rem; color:#64748b; font-weight:600; }
         .receipt-footer { background:linear-gradient(135deg,#1e3a8a,#1d4ed8); padding:20px 36px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
         .receipt-footer img { height:40px; width:auto; object-fit:contain; filter:brightness(0) invert(1); }
@@ -210,11 +211,13 @@
                 Money receipts will not be considered valid without the MD's seal and signature.
             </div>
 
-            <div class="sig-section">
-                <div class="sig-box"><div class="sig-line"></div><p>Cashier Signature</p></div>
-                <div class="sig-box"><div class="sig-line"></div><p>Manager Signature</p></div>
-                <div class="sig-box"><div class="sig-line"></div><p>MD Signature & Seal</p></div>
-            </div>
+            @include('partials.print-signatures', [
+                'settings' => $settings,
+                'sigGridClass' => 'sig-section',
+                'sigBoxClass' => 'sig-box',
+                'sigLineClass' => 'sig-line',
+                'sigImgClass' => 'sig-img',
+            ])
             @else
                 <div style="text-align:center;padding:48px;color:#94a3b8;"><p>No client data found.</p></div>
             @endif
