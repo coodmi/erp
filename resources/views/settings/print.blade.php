@@ -49,10 +49,10 @@ function refreshActivePreview() {
 
 function setDocType(type) {
     _psDocType = type;
-    ['invoice','receipt'].forEach(function(t) {
-        var btn = document.getElementById('ps_doc_' + t);
-        if (btn) btn.classList.toggle('active', t === type);
-    });
+    var invBtn = document.getElementById('ps_doc_invoice');
+    var recBtn = document.getElementById('ps_doc_receipt');
+    if (invBtn) invBtn.className = 'ps-doc-tab' + (type === 'invoice' ? ' active-invoice' : '');
+    if (recBtn) recBtn.className = 'ps-doc-tab' + (type === 'receipt' ? ' active-receipt' : '');
     document.getElementById('ps_invoice_settings').style.display = type === 'invoice' ? '' : 'none';
     document.getElementById('ps_receipt_settings').style.display = type === 'receipt' ? '' : 'none';
     document.getElementById('ps_preview_invoice').style.display = type === 'invoice' ? '' : 'none';

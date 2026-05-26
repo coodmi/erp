@@ -1032,7 +1032,18 @@ class InvoiceController extends Controller
         else{
             $img          = asset($logo . '/' . (isset($company_logo) && !empty($company_logo) ? $company_logo : 'logo-dark.png'));
         }
-        return view('invoice.templates.' . $template, compact('invoice', 'preview', 'color', 'img', 'settings', 'customer', 'font_color', 'customFields'));
+        try {
+            return view('invoice.templates.' . $template, compact('invoice', 'preview', 'color', 'img', 'settings', 'customer', 'font_color', 'customFields'));
+        } catch (\Throwable $e) {
+            report($e);
+            return response(
+                '<html><body style="font-family:sans-serif;padding:40px;text-align:center;color:#64748b;">'
+                . '<h2 style="color:#0f172a;">' . e(__('Preview unavailable')) . '</h2>'
+                . '<p>' . e($e->getMessage()) . '</p></body></html>',
+                200,
+                ['Content-Type' => 'text/html; charset=UTF-8']
+            );
+        }
     }
 
     public function previewMoneyReceipt(Request $request, $color)
