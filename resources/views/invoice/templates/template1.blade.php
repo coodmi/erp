@@ -43,39 +43,33 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-
 .inv-topbar{height:6px;background:var(--accent)}
 
 /* ── header ── */
-.inv-header{background:var(--hbg);padding:32px 36px 28px;position:relative;overflow:hidden}
+.inv-header{background:var(--hbg);padding:28px 36px;position:relative;overflow:hidden}
 .inv-header::after{content:'';position:absolute;right:-40px;top:-40px;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.05);pointer-events:none}
-
-/* header layout: left = logo+qr, right = title+meta */
-.inv-header-inner{display:flex;justify-content:space-between;align-items:stretch;gap:20px}
-
-/* LEFT: logo stacked above qr */
-.inv-head-left{display:flex;flex-direction:column;align-items:flex-start;gap:14px;flex-shrink:0}
-.inv-logo{max-height:72px;max-width:200px;object-fit:contain;display:block}
+.inv-header-inner{display:flex;justify-content:space-between;align-items:center;gap:20px}
+.inv-head-left{display:flex;flex-direction:column;align-items:flex-start;gap:12px;flex-shrink:0}
+.inv-logo{max-height:64px;max-width:200px;object-fit:contain;display:block}
 .inv-qr-box{width:52px;height:52px;border-radius:8px;padding:4px;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .inv-qr-box img,.inv-qr-box svg,.inv-qr-box table{width:100%!important;height:100%!important;max-width:44px;max-height:44px}
-/* white bg = dark qr, colored bg = white qr via invert */
 .inv-qr-box.qr-invert{background:rgba(255,255,255,.15);filter:invert(1) brightness(2)}
 .inv-qr-box.qr-normal{background:rgba(255,255,255,.95)}
-.inv-company-name{font-size:13.5px;font-weight:700;color:var(--hfg);margin-bottom:4px}
-.inv-company-detail{font-size:11px;color:rgba(255,255,255,.7);line-height:1.8}
+.inv-head-right{text-align:right}
+.inv-doc-title{font-size:32px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--hfg);line-height:1}
 
-/* RIGHT: title + meta */
-.inv-head-right{display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;gap:16px}
-.inv-doc-title{font-size:26px;font-weight:900;letter-spacing:.06em;text-transform:uppercase;color:var(--hfg);opacity:.95;line-height:1;text-align:right}
-.inv-meta{border-collapse:collapse}
-.inv-meta td{padding:2px 0;font-size:11px;color:rgba(255,255,255,.8)}
-.inv-meta td:first-child{padding-right:14px;white-space:nowrap;font-weight:500}
-.inv-meta td:last-child{text-align:right;font-weight:700;color:var(--hfg)}
+/* ── meta strip (below header) ── */
+.inv-meta-strip{background:#f8fafc;border-bottom:2px solid var(--bdr);padding:0}
+.inv-meta-strip table{width:100%;border-collapse:collapse}
+.inv-meta-strip td{padding:13px 20px;border-right:1px solid var(--bdr);vertical-align:top;white-space:nowrap}
+.inv-meta-strip td:last-child{border-right:0}
+.inv-meta-lbl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#94a3b8;display:block;margin-bottom:3px}
+.inv-meta-val{font-size:13px;font-weight:700;color:#0f172a}
 
 /* ── body ── */
 .inv-body{padding:28px 36px 36px}
 
-/* address row: company left, client right */
+/* address row */
 .inv-addr-row{display:flex;justify-content:space-between;align-items:flex-start;gap:32px;margin-bottom:28px}
 .inv-addr-block{flex:0 1 auto;min-width:0;max-width:48%}
-.inv-addr-from{align-self:flex-start}
-.inv-addr-to{margin-left:auto;text-align:right;align-self:flex-start}
+.inv-addr-to{margin-left:auto;text-align:right}
 .inv-addr-tag{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:5px}
 .inv-addr-from .inv-addr-tag::before{content:'';width:14px;height:2px;background:var(--accent);border-radius:2px;flex-shrink:0}
 .inv-addr-to .inv-addr-tag{justify-content:flex-end}
@@ -93,7 +87,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-
 .inv-tbl thead tr{background:var(--hbg)}
 .inv-tbl thead th{padding:11px 14px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.09em;color:var(--hfg);text-align:left;white-space:nowrap}
 .inv-tbl thead th:last-child{text-align:right}
-.inv-tbl tbody tr{border-bottom:1px solid var(--bdr);transition:background .1s}
+.inv-tbl tbody tr{border-bottom:1px solid var(--bdr)}
 .inv-tbl tbody tr:last-child{border-bottom:none}
 .inv-tbl tbody tr:hover{background:var(--a10)}
 .inv-tbl tbody td{padding:12px 14px;font-size:12.5px;color:var(--t2);vertical-align:top}
@@ -125,7 +119,6 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-
 
 /* RTL */
 html[dir="rtl"] .inv-doc-title{text-align:left}
-html[dir="rtl"] .inv-meta td:last-child{text-align:left}
 html[dir="rtl"] .inv-addr-to{margin-left:0;margin-right:auto;text-align:left}
 html[dir="rtl"] .inv-addr-to .inv-addr-tag{justify-content:flex-start}
 html[dir="rtl"] .inv-tbl thead th:last-child{text-align:left}
@@ -136,13 +129,13 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
 @media(max-width:620px){
   .inv-header,.inv-body{padding:20px}
   .inv-header-inner{flex-direction:column}
-  .inv-head-right{align-items:flex-start}
-  .inv-doc-title{text-align:left;font-size:28px}
+  .inv-doc-title{font-size:28px}
   .inv-addr-row{flex-direction:column;gap:20px}
   .inv-addr-block{max-width:100%}
   .inv-addr-to{margin-left:0;text-align:left}
   .inv-addr-to .inv-addr-tag{justify-content:flex-start}
   .inv-totals{width:100%}
+  .inv-meta-strip td{display:block;border-right:0;border-bottom:1px solid var(--bdr)}
 }
 @media print{
   body{background:#fff}
@@ -157,11 +150,9 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
 <div class="inv-wrap" id="boxes">
   <div class="inv-topbar"></div>
 
-  {{-- HEADER --}}
+  {{-- HEADER: logo left, INVOICE title right --}}
   <div class="inv-header">
     <div class="inv-header-inner">
-
-      {{-- LEFT: logo → qr (stacked) --}}
       <div class="inv-head-left">
         <img class="inv-logo" src="{{ $img }}" alt="Logo">
         @if(empty($preview))
@@ -170,40 +161,51 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
             $qrHtml = '';
             try {
                 $raw = DNS2D::getBarcodeHTML(route('invoice.link.copy', \Crypt::encrypt($invoice->invoice_id)), 'QRCODE', 2, 2);
-                if (is_string($raw) && mb_check_encoding($raw, 'UTF-8')) {
-                    $qrHtml = $raw;
-                }
-            } catch (\Throwable $e) {
-                $qrHtml = '';
-            }
+                if (is_string($raw) && mb_check_encoding($raw, 'UTF-8')) { $qrHtml = $raw; }
+            } catch (\Throwable $e) {}
           @endphp
           {!! $qrHtml !!}
         </div>
         @endif
       </div>
-
-      {{-- RIGHT: title + meta --}}
       <div class="inv-head-right">
         <div class="inv-doc-title">{{ __('Invoice') }}</div>
-        <table class="inv-meta">
-          <tr><td>{{ __('Invoice No') }}</td><td>{{ Utility::invoiceNumberFormat($settings,$invoice->invoice_id) }}</td></tr>
-          <tr><td>{{ __('Issue Date') }}</td><td>{{ Utility::dateFormat($settings,$invoice->issue_date) }}</td></tr>
-          <tr><td>{{ __('Due Date') }}</td><td>{{ Utility::dateFormat($settings,$invoice->due_date) }}</td></tr>
-          @if(!empty($customFields) && count($invoice->customField)>0)
-            @foreach($customFields as $field)
-              <tr><td>{{ $field->name }}</td><td>{{ $invoice->customField[$field->id] ?? '-' }}</td></tr>
-            @endforeach
-          @endif
-        </table>
       </div>
-
     </div>
+  </div>
+
+  {{-- META STRIP: Invoice No | Issue Date | Due Date in one line --}}
+  <div class="inv-meta-strip">
+    <table cellpadding="0" cellspacing="0">
+      <tr>
+        <td>
+          <span class="inv-meta-lbl">{{ __('Invoice No') }}</span>
+          <span class="inv-meta-val">{{ Utility::invoiceNumberFormat($settings, $invoice->invoice_id) }}</span>
+        </td>
+        <td>
+          <span class="inv-meta-lbl">{{ __('Issue Date') }}</span>
+          <span class="inv-meta-val">{{ Utility::dateFormat($settings, $invoice->issue_date) }}</span>
+        </td>
+        <td>
+          <span class="inv-meta-lbl">{{ __('Due Date') }}</span>
+          <span class="inv-meta-val">{{ Utility::dateFormat($settings, $invoice->due_date) }}</span>
+        </td>
+        @if(!empty($customFields) && count($invoice->customField) > 0)
+          @foreach($customFields as $field)
+          <td>
+            <span class="inv-meta-lbl">{{ $field->name }}</span>
+            <span class="inv-meta-val">{{ $invoice->customField[$field->id] ?? '-' }}</span>
+          </td>
+          @endforeach
+        @endif
+      </tr>
+    </table>
   </div>
 
   {{-- BODY --}}
   <div class="inv-body">
 
-    {{-- Addresses: company left, client right --}}
+    {{-- Addresses: company left (FROM), client right (TO) --}}
     <div class="inv-addr-row">
       <div class="inv-addr-block inv-addr-from">
         <div class="inv-addr-tag">{{ __('From') }}</div>
