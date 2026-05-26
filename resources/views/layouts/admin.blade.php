@@ -46,6 +46,13 @@
 
     <script src="{{ asset('js/html5shiv.js') }}"></script>
 
+    <!-- ── Critical: prevent sidebar/page flash on load ── -->
+    <style>
+        html,body{background:#f1f5f9!important}
+        .dash-sidebar{background:#0f1629!important;visibility:visible!important}
+        .loader-bg{background:#0f1629!important;position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center}
+    </style>
+
 {{--    <script src="https://oss.maxcdn.com/libs/respond.js/1.4.2/respond.min.js"></script>--}}
 
     <!-- Meta -->

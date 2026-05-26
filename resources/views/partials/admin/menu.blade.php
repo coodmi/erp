@@ -10,9 +10,9 @@
 {{--<nav class="dash-sidebar light-sidebar {{(isset($mode_setting['cust_theme_bg']) && $mode_setting['cust_theme_bg'] == 'on')?'transprent-bg':''}}">--}}
 
 @if (isset($setting['cust_theme_bg']) && $setting['cust_theme_bg'] == 'on')
-    <nav class="dash-sidebar light-sidebar transprent-bg">
+    <nav class="dash-sidebar transprent-bg">
 @else
-    <nav class="dash-sidebar light-sidebar">
+    <nav class="dash-sidebar">
 @endif
     <div class="navbar-wrapper">
         <div class="m-header main-logo ai-sidebar-logo-header">
