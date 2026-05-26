@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // After page reload (company info saved), refresh preview with cache bust
     @if(session('success'))
-    setTimeout(function() { refreshActivePreview(); }, 500);
+    setTimeout(function() { refreshActivePreview(); }, 300);
     @endif
     var rInp = document.getElementById('receipt_logo');
     var rImg = document.getElementById('receipt_image');

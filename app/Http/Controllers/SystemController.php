@@ -1169,7 +1169,7 @@ class SystemController extends Controller
 
         if ($request->hasFile('receipt_logo')) {
             $dir = 'receipt_logo/';
-            $receipt_logo = \Auth::user()->id . '_receipt_logo.png';
+            $receipt_logo = \Auth::user()->id . '_receipt_logo_' . time() . '.png';
             $file = $request->file('receipt_logo');
             $validator = \Validator::make(
                 ['receipt_logo' => $file],
@@ -1177,6 +1177,11 @@ class SystemController extends Controller
             );
             if ($validator->fails()) {
                 return redirect()->back()->with('error', $validator->messages()->first());
+            }
+            // Delete old logo file if exists
+            $old = \App\Models\Utility::getValByName('receipt_logo');
+            if (!empty($old)) {
+                \Storage::disk('public')->delete('receipt_logo/' . $old);
             }
             \Storage::disk('public')->putFileAs($dir, $file, $receipt_logo);
             $post['receipt_logo'] = $receipt_logo;

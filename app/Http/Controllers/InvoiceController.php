@@ -1291,8 +1291,13 @@ class InvoiceController extends Controller
         if ($request->hasFile('invoice_logo'))
         {
             $dir = 'invoice_logo/';
-            $invoice_logo = \Auth::user()->id . '_invoice_logo.png';
+            $invoice_logo = \Auth::user()->id . '_invoice_logo_' . time() . '.png';
             $file = $request->file('invoice_logo');
+            // Delete old logo file if exists
+            $old = \App\Models\Utility::getValByName('invoice_logo');
+            if (!empty($old)) {
+                \Storage::disk('public')->delete('invoice_logo/' . $old);
+            }
             \Storage::disk('public')->putFileAs($dir, $file, $invoice_logo);
             $post['invoice_logo'] = $invoice_logo;
         }
