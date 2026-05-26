@@ -1170,10 +1170,15 @@ class SystemController extends Controller
         if ($request->hasFile('receipt_logo')) {
             $dir = 'receipt_logo/';
             $receipt_logo = \Auth::user()->id . '_receipt_logo.png';
-            $path = Utility::upload_file($request, 'receipt_logo', $receipt_logo, $dir, $validation);
-            if ($path['flag'] == 0) {
-                return redirect()->back()->with('error', __($path['msg']));
+            $file = $request->file('receipt_logo');
+            $validator = \Validator::make(
+                ['receipt_logo' => $file],
+                ['receipt_logo' => $validation]
+            );
+            if ($validator->fails()) {
+                return redirect()->back()->with('error', $validator->messages()->first());
             }
+            \Storage::disk('public')->putFileAs($dir, $file, $receipt_logo);
             $post['receipt_logo'] = $receipt_logo;
         }
 

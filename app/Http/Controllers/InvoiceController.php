@@ -1288,20 +1288,12 @@ class InvoiceController extends Controller
             $post['invoice_color'] = "ffffff";
         }
 
-        if($request->invoice_logo)
+        if ($request->hasFile('invoice_logo'))
         {
             $dir = 'invoice_logo/';
             $invoice_logo = \Auth::user()->id . '_invoice_logo.png';
-            $validation =[
-                'mimes:'.'png',
-                'max:'.'20480',
-            ];
-            $path = Utility::upload_file($request,'invoice_logo',$invoice_logo,$dir,$validation);
-
-            if($path['flag']==0)
-            {
-                return redirect()->back()->with('error', __($path['msg']));
-            }
+            $file = $request->file('invoice_logo');
+            \Storage::disk('public')->putFileAs($dir, $file, $invoice_logo);
             $post['invoice_logo'] = $invoice_logo;
         }
 
@@ -1315,6 +1307,8 @@ class InvoiceController extends Controller
                                                                                                                                          ]
             );
         }
+
+        \App\Models\Utility::clearSettingsCache();
 
         return redirect()->back()->with('success', __('Invoice Setting updated successfully'));
     }
