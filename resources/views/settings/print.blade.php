@@ -6,6 +6,7 @@
 @endsection
 
 @push('script-page')
+<script type="text/javascript" src="{{ asset('js/html2pdf.bundle.min.js') }}"></script>
 <script>
 // ── data from server ──
 var _psCustomers = {!! json_encode($customers) !!};
@@ -50,6 +51,85 @@ function refreshReceiptPreview() {
 function refreshActivePreview() {
     if (_psDocType === 'receipt') refreshReceiptPreview();
     else refreshPreview();
+}
+
+function getActivePreviewFrame() {
+    return document.getElementById(_psDocType === 'receipt' ? 'receipt_frame' : 'invoice_frame');
+}
+
+function psPreviewFilename() {
+    var base = _psDocType === 'receipt' ? 'money-receipt' : 'invoice';
+    if (_psSelectedParty && _psSelectedParty.name) {
+        base = _psSelectedParty.name.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, '-') + '-' + base;
+    }
+    return base + '-preview.pdf';
+}
+
+function whenPreviewFrameReady(frame, cb) {
+    if (!frame) return;
+    var run = function () {
+        try {
+            var doc = frame.contentDocument || (frame.contentWindow && frame.contentWindow.document);
+            if (doc && doc.getElementById('boxes')) { cb(doc); return; }
+        } catch (e) {}
+        cb(null);
+    };
+    if (frame.contentDocument && frame.contentDocument.readyState === 'complete') {
+        run();
+    } else {
+        frame.addEventListener('load', run, { once: true });
+    }
+}
+
+function psPrintPreview() {
+    var frame = getActivePreviewFrame();
+    if (!frame || !frame.src) return;
+    whenPreviewFrameReady(frame, function (doc) {
+        if (doc) {
+            try {
+                frame.contentWindow.focus();
+                frame.contentWindow.print();
+                return;
+            } catch (e) {}
+        }
+        window.open(frame.src, '_blank');
+    });
+}
+
+function psDownloadPdf() {
+    var frame = getActivePreviewFrame();
+    if (!frame || !frame.src) return;
+    if (typeof html2pdf === 'undefined') {
+        window.open(frame.src + (frame.src.indexOf('?') >= 0 ? '&' : '?') + 'pdf=1', '_blank');
+        return;
+    }
+    var btn = document.querySelector('.ps-preview-btn.pdf');
+    if (btn) btn.disabled = true;
+    whenPreviewFrameReady(frame, function (doc) {
+        if (!doc) {
+            if (btn) btn.disabled = false;
+            window.open(frame.src + (frame.src.indexOf('?') >= 0 ? '&' : '?') + 'pdf=1', '_blank');
+            return;
+        }
+        var element = doc.getElementById('boxes');
+        if (!element) {
+            if (btn) btn.disabled = false;
+            alert('{{ __("Preview not ready. Please wait a moment and try again.") }}');
+            return;
+        }
+        var opt = {
+            filename: psPreviewFilename(),
+            image: { type: 'jpeg', quality: 1 },
+            html2canvas: { scale: 3, useCORS: true, letterRendering: true },
+            jsPDF: { unit: 'in', format: 'A4', orientation: 'portrait' }
+        };
+        html2pdf().set(opt).from(element).save().then(function () {
+            if (btn) btn.disabled = false;
+        }).catch(function () {
+            if (btn) btn.disabled = false;
+            window.open(frame.src + (frame.src.indexOf('?') >= 0 ? '&' : '?') + 'pdf=1', '_blank');
+        });
+    });
 }
 
 function setDocType(type) {
@@ -276,6 +356,15 @@ function updatePartyDropdown() {
 }
 .ps-dot { width:10px; height:10px; border-radius:50%; }
 .ps-preview-label { font-size:.73rem; color:var(--c-muted); font-weight:700; margin-left:6px; }
+.ps-preview-actions { display:flex; align-items:center; gap:8px; margin-left:auto; flex-shrink:0; }
+.ps-preview-btn {
+    display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:10px;
+    font-size:.76rem; font-weight:700; border:0; cursor:pointer; transition:all .18s; white-space:nowrap;
+}
+.ps-preview-btn.print { background:linear-gradient(135deg,#3b82f6,#2563eb); color:#fff; box-shadow:0 4px 12px rgba(37,99,235,.2); }
+.ps-preview-btn.pdf { background:#fff; color:#475569; border:1.5px solid #e2e8f0; }
+.ps-preview-btn:hover { filter:brightness(1.05); transform:translateY(-1px); }
+.ps-preview-btn:disabled { opacity:.55; cursor:wait; transform:none; }
 .ps-iframe { width:100%; height:720px; border:0; display:block; background:#f8fafc; }
 
 /* ── Company info collapsible ── */
@@ -595,7 +684,15 @@ function updatePartyDropdown() {
         <span class="ps-dot" style="background:#f59e0b;"></span>
         <span class="ps-dot" style="background:#22c55e;"></span>
         <span class="ps-preview-label">{{ __('Live Preview — Invoice') }}</span>
-        <span id="ps_preview_party_label" style="margin-left:auto;font-size:.72rem;font-weight:700;color:#2563eb;background:#eff6ff;padding:3px 10px;border-radius:20px;display:none;"></span>
+        <span id="ps_preview_party_label" style="font-size:.72rem;font-weight:700;color:#2563eb;background:#eff6ff;padding:3px 10px;border-radius:20px;display:none;"></span>
+        <div class="ps-preview-actions">
+            <button type="button" class="ps-preview-btn print" onclick="psPrintPreview()" title="{{ __('Print') }}">
+                <i class="ti ti-printer"></i> {{ __('Print') }}
+            </button>
+            <button type="button" class="ps-preview-btn pdf" onclick="psDownloadPdf()" title="{{ __('Save as PDF') }}">
+                <i class="ti ti-file-type-pdf"></i> {{ __('Save PDF') }}
+            </button>
+        </div>
     </div>
     @php
         $i_tpl   = $settings['invoice_template'] ?? 'template1';
@@ -611,7 +708,15 @@ function updatePartyDropdown() {
         <span class="ps-dot" style="background:#f59e0b;"></span>
         <span class="ps-dot" style="background:#22c55e;"></span>
         <span class="ps-preview-label">{{ __('Live Preview — Money Receipt') }}</span>
-        <span id="ps_preview_party_label_rc" style="margin-left:auto;font-size:.72rem;font-weight:700;color:#6366f1;background:#eef2ff;padding:3px 10px;border-radius:20px;display:none;"></span>
+        <span id="ps_preview_party_label_rc" style="font-size:.72rem;font-weight:700;color:#6366f1;background:#eef2ff;padding:3px 10px;border-radius:20px;display:none;"></span>
+        <div class="ps-preview-actions">
+            <button type="button" class="ps-preview-btn print" onclick="psPrintPreview()" title="{{ __('Print') }}">
+                <i class="ti ti-printer"></i> {{ __('Print') }}
+            </button>
+            <button type="button" class="ps-preview-btn pdf" onclick="psDownloadPdf()" title="{{ __('Save as PDF') }}">
+                <i class="ti ti-file-type-pdf"></i> {{ __('Save PDF') }}
+            </button>
+        </div>
     </div>
     @php $r_color = $settings['receipt_header_color'] ?? '1e3a8a'; @endphp
     <iframe id="receipt_frame" class="ps-iframe"

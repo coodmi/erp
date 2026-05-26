@@ -1097,6 +1097,29 @@ class InvoiceController extends Controller
     }
 
     /**
+     * Optional print / PDF scripts when preview is opened with ?print=1 or ?pdf=1.
+     */
+    private function previewActionScripts(Request $request): string
+    {
+        $scripts = '';
+        if ($request->boolean('print')) {
+            $scripts .= '<script>window.addEventListener("load",function(){window.focus();window.print();});</script>';
+        }
+        if ($request->boolean('pdf')) {
+            $pdfJs = e(asset('js/html2pdf.bundle.min.js'));
+            $scripts .= '<script src="' . $pdfJs . '"></script><script>'
+                . 'window.addEventListener("load",function(){'
+                . 'var el=document.getElementById("boxes");if(!el||typeof html2pdf==="undefined")return;'
+                . 'html2pdf().set({filename:"document-preview.pdf",image:{type:"jpeg",quality:1},'
+                . 'html2canvas:{scale:3,useCORS:true,letterRendering:true},'
+                . 'jsPDF:{unit:"in",format:"A4",orientation:"portrait"}}).from(el).save();'
+                . '});</script>';
+        }
+
+        return $scripts;
+    }
+
+    /**
      * Settings merged with safe defaults for print preview.
      */
     private function previewSettings(): array
@@ -1122,6 +1145,8 @@ class InvoiceController extends Controller
             if (!mb_check_encoding($html, 'UTF-8')) {
                 $html = mb_convert_encoding($html, 'UTF-8', 'UTF-8');
             }
+
+            $html .= $this->previewActionScripts(request());
 
             return response($html, 200, ['Content-Type' => 'text/html; charset=UTF-8']);
         } catch (\Throwable $e) {

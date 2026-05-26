@@ -87,7 +87,7 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#0f172a;font-size:1
 </style>
 </head>
 <body>
-<div class="rc-wrap">
+<div class="rc-wrap" id="boxes">
   <div class="rc-topbar"></div>
 
   <div class="rc-header">
