@@ -183,7 +183,77 @@ document.addEventListener('DOMContentLoaded', function () {
             }
         });
     });
+    initPsSigCarousel();
 });
+
+function initPsSigCarousel() {
+    var track = document.getElementById('ps_sig_carousel');
+    var viewport = track && track.closest('.ps-sig-carousel-viewport');
+    var prevBtn = document.getElementById('ps_sig_prev');
+    var nextBtn = document.getElementById('ps_sig_next');
+    var dotsWrap = document.getElementById('ps_sig_dots');
+    if (!track || !viewport) return;
+
+    var slots = track.querySelectorAll('.ps-sig-slot');
+    if (!slots.length) return;
+
+    function scrollAmount() {
+        var slot = slots[0];
+        return slot.offsetWidth + 14;
+    }
+
+    function activeIndex() {
+        var amt = scrollAmount();
+        if (amt <= 0) return 0;
+        return Math.max(0, Math.min(slots.length - 1, Math.round(track.scrollLeft / amt)));
+    }
+
+    function updateUi() {
+        var idx = activeIndex();
+        var maxScroll = track.scrollWidth - track.clientWidth - 2;
+        slots.forEach(function (el, i) {
+            el.classList.toggle('is-active', i === idx);
+        });
+        if (dotsWrap) {
+            dotsWrap.querySelectorAll('.ps-sig-dot').forEach(function (dot, i) {
+                dot.classList.toggle('active', i === idx);
+                dot.setAttribute('aria-selected', i === idx ? 'true' : 'false');
+            });
+        }
+        if (prevBtn) prevBtn.disabled = track.scrollLeft <= 2;
+        if (nextBtn) nextBtn.disabled = track.scrollLeft >= maxScroll;
+        viewport.style.setProperty('--sig-fade-l', track.scrollLeft > 4 ? '1' : '0');
+        viewport.style.setProperty('--sig-fade-r', track.scrollLeft < maxScroll - 2 ? '1' : '0');
+    }
+
+    function scrollToIndex(i) {
+        track.scrollTo({ left: scrollAmount() * i, behavior: 'smooth' });
+    }
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function () {
+            scrollToIndex(Math.max(0, activeIndex() - 1));
+        });
+    }
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function () {
+            scrollToIndex(Math.min(slots.length - 1, activeIndex() + 1));
+        });
+    }
+    if (dotsWrap) {
+        dotsWrap.querySelectorAll('.ps-sig-dot').forEach(function (dot) {
+            dot.addEventListener('click', function () {
+                scrollToIndex(parseInt(this.getAttribute('data-index'), 10) || 0);
+            });
+        });
+    }
+
+    track.addEventListener('scroll', function () {
+        window.requestAnimationFrame(updateUi);
+    }, { passive: true });
+    window.addEventListener('resize', updateUi);
+    updateUi();
+}
 
 // ── Party type selector ──
 function updatePartyDropdown() {
@@ -249,7 +319,7 @@ function updatePartyDropdown() {
 .ps-card-icon.orange { background:linear-gradient(135deg,#fb923c,#ea580c); box-shadow:0 5px 12px rgba(234,88,12,.25); }
 .ps-card-title { font-size:.9rem; font-weight:800; color:var(--c-dark); margin:0; }
 .ps-card-sub   { font-size:.72rem; color:var(--c-muted); margin:2px 0 0; }
-.ps-card-body  { padding:18px 20px; }
+.ps-card-body  { padding:18px 20px; container-type:inline-size; }
 
 /* ── Labels & inputs ── */
 .ps-label {
@@ -376,12 +446,99 @@ function updatePartyDropdown() {
 .ps-preview-btn.pdf { background:#fff; color:#475569; border:1.5px solid #e2e8f0; }
 .ps-preview-btn:hover { filter:brightness(1.05); transform:translateY(-1px); }
 .ps-preview-btn:disabled { opacity:.55; cursor:wait; transform:none; }
-.ps-sig-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; }
-@media(max-width:700px){ .ps-sig-grid{ grid-template-columns:1fr; } }
-.ps-sig-slot { border:1px dashed #cbd5e1; border-radius:12px; padding:12px; background:#f8fafc; text-align:center; }
-.ps-sig-slot label.ps-label { display:block; margin-bottom:8px; font-size:.72rem; }
-.ps-sig-current { max-height:52px; max-width:100%; object-fit:contain; margin:0 auto 8px; display:block; }
-.ps-sig-upload { margin-top:4px; }
+/* ── Signature carousel ── */
+.ps-sig-carousel-outer { margin-top:4px; }
+.ps-sig-carousel-top {
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    margin-bottom:10px; flex-wrap:wrap;
+}
+.ps-sig-scroll-hint {
+    display:inline-flex; align-items:center; gap:6px; font-size:.68rem; font-weight:600;
+    color:#94a3b8; letter-spacing:.02em;
+}
+.ps-sig-nav-group { display:flex; gap:6px; }
+.ps-sig-nav {
+    width:34px; height:34px; border-radius:10px; border:1.5px solid #e2e8f0;
+    background:#fff; color:#475569; cursor:pointer; display:inline-flex;
+    align-items:center; justify-content:center; transition:all .18s;
+    box-shadow:0 2px 8px rgba(15,23,42,.06);
+}
+.ps-sig-nav:hover:not(:disabled) {
+    border-color:#6366f1; color:#4f46e5; background:#eef2ff;
+    transform:translateY(-1px); box-shadow:0 4px 12px rgba(99,102,241,.18);
+}
+.ps-sig-nav:disabled { opacity:.35; cursor:not-allowed; transform:none; }
+.ps-sig-carousel-viewport {
+    position:relative; margin:0 -6px; padding:0 6px;
+}
+.ps-sig-carousel-viewport::before,
+.ps-sig-carousel-viewport::after {
+    content:''; position:absolute; top:0; bottom:10px; width:28px; z-index:2;
+    pointer-events:none; transition:opacity .2s;
+}
+.ps-sig-carousel-viewport::before {
+    left:0; background:linear-gradient(90deg,#fff 0%,rgba(255,255,255,0));
+    opacity:var(--sig-fade-l, 0);
+}
+.ps-sig-carousel-viewport::after {
+    right:0; background:linear-gradient(270deg,#fff 0%,rgba(255,255,255,0));
+    opacity:var(--sig-fade-r, 1);
+}
+.ps-sig-carousel {
+    display:flex; gap:14px; overflow-x:auto; overflow-y:hidden;
+    scroll-snap-type:x mandatory; scroll-behavior:smooth;
+    padding:4px 2px 12px; -webkit-overflow-scrolling:touch;
+    scrollbar-width:thin; scrollbar-color:#c7d2fe transparent;
+}
+.ps-sig-carousel::-webkit-scrollbar { height:5px; }
+.ps-sig-carousel::-webkit-scrollbar-track { background:transparent; border-radius:99px; }
+.ps-sig-carousel::-webkit-scrollbar-thumb {
+    background:linear-gradient(90deg,#a5b4fc,#818cf8); border-radius:99px;
+}
+.ps-sig-slot {
+    flex:0 0 88%; min-width:240px; max-width:280px;
+    scroll-snap-align:center; scroll-snap-stop:always;
+    border:1.5px dashed #cbd5e1; border-radius:14px; padding:14px 12px;
+    background:linear-gradient(180deg,#fff 0%,#f8fafc 100%);
+    text-align:center; box-shadow:0 4px 16px rgba(15,23,42,.05);
+    transition:border-color .2s, box-shadow .2s;
+}
+.ps-sig-slot.is-active {
+    border-color:#818cf8; box-shadow:0 8px 24px rgba(99,102,241,.12);
+}
+.ps-sig-slot label.ps-label {
+    display:block; margin-bottom:10px; font-size:.7rem;
+    letter-spacing:.04em; color:#475569;
+}
+.ps-sig-current { max-height:56px; max-width:100%; object-fit:contain; margin:0 auto 8px; display:block; }
+.ps-sig-upload { margin-top:6px; min-height:72px; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+.ps-sig-dots {
+    display:flex; justify-content:center; align-items:center; gap:8px; margin-top:12px;
+}
+.ps-sig-dot {
+    width:8px; height:8px; border-radius:50%; border:0; padding:0; cursor:pointer;
+    background:#e2e8f0; transition:all .22s;
+}
+.ps-sig-dot.active {
+    width:22px; border-radius:99px;
+    background:linear-gradient(90deg,#818cf8,#6366f1);
+    box-shadow:0 2px 8px rgba(99,102,241,.35);
+}
+@container (min-width: 560px) {
+    .ps-sig-carousel-top .ps-sig-scroll-hint,
+    .ps-sig-carousel-top .ps-sig-nav-group,
+    .ps-sig-dots { display:none; }
+    .ps-sig-carousel-viewport::before,
+    .ps-sig-carousel-viewport::after { display:none; }
+    .ps-sig-carousel {
+        display:grid; grid-template-columns:repeat(3,1fr);
+        overflow:visible; scroll-snap-type:none; gap:12px; padding-bottom:0;
+    }
+    .ps-sig-slot {
+        flex:unset; min-width:0; max-width:none;
+        scroll-snap-align:unset; scroll-snap-stop:normal;
+    }
+}
 .ps-iframe { width:100%; height:720px; border:0; display:block; background:#f8fafc; }
 
 /* ── Company info collapsible ── */
@@ -623,23 +780,47 @@ function updatePartyDropdown() {
                             ['field' => 'signature_md', 'label' => __('MD Signature & Seal'), 'preview' => 'sig_preview_md'],
                         ];
                     @endphp
-                    <div class="ps-sig-grid">
-                        @foreach($sigSlots as $slot)
-                            @php $curSig = $settings[$slot['field']] ?? ''; @endphp
-                            <div class="ps-sig-slot">
-                                <label class="ps-label">{{ $slot['label'] }}</label>
-                                @if(!empty($curSig))
-                                    <img src="{{ $sigDir . $curSig }}" alt="{{ $slot['label'] }}" class="ps-sig-current">
-                                    <span style="font-size:.68rem;color:#059669;font-weight:700;">✓ {{ __('Uploaded') }}</span>
-                                @endif
-                                <label class="ps-upload ps-sig-upload" for="{{ $slot['field'] }}">
-                                    <i class="ti ti-writing ps-upload-icon"></i>
-                                    <span class="ps-upload-text">{{ __('Upload image') }}</span>
-                                    <input type="file" name="{{ $slot['field'] }}" id="{{ $slot['field'] }}" accept="image/png,image/jpeg,image/jpg">
-                                </label>
-                                <img id="{{ $slot['preview'] }}" class="ps-sig-current" src="" alt="" style="display:none;">
+                    <div class="ps-sig-carousel-outer">
+                        <div class="ps-sig-carousel-top">
+                            <span class="ps-sig-scroll-hint">
+                                <i class="ti ti-hand-move"></i> {{ __('Swipe or scroll') }}
+                            </span>
+                            <div class="ps-sig-nav-group">
+                                <button type="button" class="ps-sig-nav" id="ps_sig_prev" aria-label="{{ __('Previous signature') }}">
+                                    <i class="ti ti-chevron-left"></i>
+                                </button>
+                                <button type="button" class="ps-sig-nav" id="ps_sig_next" aria-label="{{ __('Next signature') }}">
+                                    <i class="ti ti-chevron-right"></i>
+                                </button>
                             </div>
-                        @endforeach
+                        </div>
+                        <div class="ps-sig-carousel-viewport">
+                            <div class="ps-sig-carousel" id="ps_sig_carousel" role="tablist" aria-label="{{ __('Signature uploads') }}">
+                                @foreach($sigSlots as $i => $slot)
+                                    @php $curSig = $settings[$slot['field']] ?? ''; @endphp
+                                    <div class="ps-sig-slot{{ $i === 0 ? ' is-active' : '' }}" role="tab" data-index="{{ $i }}">
+                                        <label class="ps-label">{{ $slot['label'] }}</label>
+                                        @if(!empty($curSig))
+                                            <img src="{{ $sigDir . $curSig }}" alt="{{ $slot['label'] }}" class="ps-sig-current">
+                                            <span style="font-size:.68rem;color:#059669;font-weight:700;">✓ {{ __('Uploaded') }}</span>
+                                        @endif
+                                        <label class="ps-upload ps-sig-upload" for="{{ $slot['field'] }}">
+                                            <i class="ti ti-writing ps-upload-icon"></i>
+                                            <span class="ps-upload-text">{{ __('Upload image') }}</span>
+                                            <input type="file" name="{{ $slot['field'] }}" id="{{ $slot['field'] }}" accept="image/png,image/jpeg,image/jpg">
+                                        </label>
+                                        <img id="{{ $slot['preview'] }}" class="ps-sig-current" src="" alt="" style="display:none;">
+                                    </div>
+                                @endforeach
+                            </div>
+                        </div>
+                        <div class="ps-sig-dots" id="ps_sig_dots" role="tablist" aria-label="{{ __('Signature slides') }}">
+                            @foreach($sigSlots as $i => $slot)
+                                <button type="button" class="ps-sig-dot{{ $i === 0 ? ' active' : '' }}"
+                                    data-index="{{ $i }}" aria-label="{{ $slot['label'] }}"
+                                    aria-selected="{{ $i === 0 ? 'true' : 'false' }}"></button>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
                 <button type="submit" class="ps-btn green" style="background:linear-gradient(135deg,#818cf8,#6366f1);box-shadow:0 8px 20px rgba(99,102,241,.25);">
