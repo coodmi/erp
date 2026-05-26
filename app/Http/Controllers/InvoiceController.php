@@ -984,106 +984,9 @@ class InvoiceController extends Controller
         $settings = Utility::settings();
         $invoice  = new Invoice();
 
-        // Load real party data if provided
         $partyId   = $request->get('party_id');
-        $partyType = $request->get('party_type', 'customer'); // customer | vendor | agent
-
-        $customer = new \stdClass();
-
-        if ($partyId && in_array($partyType, ['customer', 'vendor', 'agent'])) {
-            if ($partyType === 'customer') {
-                $real = \App\Models\VClient::find($partyId);
-                if ($real) {
-                    $customer->billing_name    = $real->client_name ?? '';
-                    $customer->billing_address = $real->address ?? '';
-                    $customer->billing_city    = '';
-                    $customer->billing_state   = '';
-                    $customer->billing_country = '';
-                    $customer->billing_zip     = '';
-                    $customer->billing_phone   = $real->passport_no ?? ($real->unique_code ?? '');
-                    $customer->shipping_name    = $real->client_name ?? '';
-                    $customer->shipping_address = $real->address ?? '';
-                    $customer->shipping_city    = '';
-                    $customer->shipping_state   = '';
-                    $customer->shipping_country = '';
-                    $customer->shipping_zip     = '';
-                    $customer->shipping_phone   = $real->passport_no ?? ($real->unique_code ?? '');
-                } else {
-                    $real = \App\Models\Customer::where('created_by', $objUser->creatorId())->find($partyId);
-                    if ($real) {
-                        $customer->billing_name     = $real->billing_name ?? $real->name ?? '';
-                        $customer->billing_address  = $real->billing_address ?? '';
-                        $customer->billing_city     = $real->billing_city ?? '';
-                        $customer->billing_state    = $real->billing_state ?? '';
-                        $customer->billing_country  = $real->billing_country ?? '';
-                        $customer->billing_zip      = $real->billing_zip ?? '';
-                        $customer->billing_phone    = $real->billing_phone ?? $real->contact ?? '';
-                        $customer->shipping_name    = $real->shipping_name ?? '';
-                        $customer->shipping_address = $real->shipping_address ?? '';
-                        $customer->shipping_city    = $real->shipping_city ?? '';
-                        $customer->shipping_state   = $real->shipping_state ?? '';
-                        $customer->shipping_country = $real->shipping_country ?? '';
-                        $customer->shipping_zip     = $real->shipping_zip ?? '';
-                        $customer->shipping_phone   = $real->shipping_phone ?? '';
-                    }
-                }
-            } elseif ($partyType === 'vendor') {
-                $real = \App\Models\Vender::find($partyId);
-                if ($real) {
-                    $customer->billing_name    = $real->name ?? '';
-                    $customer->billing_address = $real->billing_address ?? '';
-                    $customer->billing_city    = $real->billing_city ?? '';
-                    $customer->billing_state   = $real->billing_state ?? '';
-                    $customer->billing_country = $real->billing_country ?? '';
-                    $customer->billing_zip     = $real->billing_zip ?? '';
-                    $customer->billing_phone   = $real->billing_phone ?? '';
-                    $customer->shipping_name    = $real->shipping_name ?? '';
-                    $customer->shipping_address = $real->shipping_address ?? '';
-                    $customer->shipping_city    = $real->shipping_city ?? '';
-                    $customer->shipping_state   = $real->shipping_state ?? '';
-                    $customer->shipping_country = $real->shipping_country ?? '';
-                    $customer->shipping_zip     = $real->shipping_zip ?? '';
-                    $customer->shipping_phone   = $real->shipping_phone ?? '';
-                }
-            } elseif ($partyType === 'agent') {
-                $real = \App\Models\Agent::find($partyId);
-                if ($real) {
-                    $customer->billing_name    = $real->agent_name ?? '';
-                    $customer->billing_address = $real->address ?? '';
-                    $customer->billing_city    = '';
-                    $customer->billing_state   = '';
-                    $customer->billing_country = '';
-                    $customer->billing_zip     = '';
-                    $customer->billing_phone   = $real->passport_number ?? ($real->unique_code ?? '');
-                    $customer->shipping_name    = $real->agent_name ?? '';
-                    $customer->shipping_address = $real->address ?? '';
-                    $customer->shipping_city    = '';
-                    $customer->shipping_state   = '';
-                    $customer->shipping_country = '';
-                    $customer->shipping_zip     = '';
-                    $customer->shipping_phone   = $real->passport_number ?? ($real->unique_code ?? '');
-                }
-            }
-        }
-
-        // Fallback placeholders if no real data
-        if (empty($customer->billing_name ?? '')) {
-            $customer->email            = '<Email>';
-            $customer->shipping_name    = '<Customer Name>';
-            $customer->shipping_country = '<Country>';
-            $customer->shipping_state   = '<State>';
-            $customer->shipping_city    = '<City>';
-            $customer->shipping_phone   = '<Customer Phone Number>';
-            $customer->shipping_zip     = '<Zip>';
-            $customer->shipping_address = '<Address>';
-            $customer->billing_name     = '<Customer Name>';
-            $customer->billing_country  = '<Country>';
-            $customer->billing_state    = '<State>';
-            $customer->billing_city     = '<City>';
-            $customer->billing_phone    = '<Customer Phone Number>';
-            $customer->billing_zip      = '<Zip>';
-            $customer->billing_address  = '<Address>';
-        }
+        $partyType = $request->get('party_type', 'customer');
+        $customer  = $this->resolvePreviewParty($partyId, $partyType, $objUser);
 
         $previewTotals = $this->buildPreviewLineItems($partyId, $partyType);
         $items           = $previewTotals['items'];
@@ -1125,6 +1028,61 @@ class InvoiceController extends Controller
             $img          = asset($logo . '/' . (isset($company_logo) && !empty($company_logo) ? $company_logo : 'logo-dark.png'));
         }
         return view('invoice.templates.' . $template, compact('invoice', 'preview', 'color', 'img', 'settings', 'customer', 'font_color', 'customFields'));
+    }
+
+    public function previewMoneyReceipt(Request $request, $color)
+    {
+        $objUser  = \Auth::user();
+        $settings = Utility::settings();
+        $invoice  = new Invoice();
+
+        $partyId   = $request->get('party_id');
+        $partyType = $request->get('party_type', 'customer');
+        $customer  = $this->resolvePreviewParty($partyId, $partyType, $objUser);
+
+        $previewTotals = $this->buildPreviewLineItems($partyId, $partyType);
+        $items         = $previewTotals['items'];
+
+        $invoice->itemData          = $items;
+        $invoice->totalQuantity     = $previewTotals['totalQuantity'];
+        $invoice->totalRate         = $previewTotals['previewSubTotal'];
+        $invoice->totalDiscount     = $previewTotals['totalDiscount'];
+        $invoice->previewSubTotal   = $previewTotals['previewSubTotal'];
+        $invoice->previewGrandTotal = $previewTotals['previewGrandTotal'];
+        $invoice->previewPaid       = $previewTotals['previewPaid'];
+        $invoice->previewDue        = $previewTotals['previewDue'];
+        $invoice->previewRefund     = $previewTotals['previewRefund'];
+        $invoice->created_by        = $objUser->creatorId();
+
+        $preview     = 1;
+        $receiptNo   = 'RCP-' . strtoupper(substr(md5($partyId . $partyType . date('Ymd')), 0, 8));
+        $partyLabel  = ucfirst($partyType === 'customer' ? 'client' : $partyType);
+        $noticeText  = $settings['receipt_notice_text'] ?? __("Money receipts will not be considered valid without the MD's seal and signature.");
+        $footerText  = $settings['receipt_footer_text'] ?? '';
+        $displayName = $settings['receipt_company_name'] ?? ($settings['company_name'] ?? '');
+
+        $hex = ltrim($color, '#');
+        if (strlen($hex) === 3) {
+            $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
+        }
+        $color = '#' . $hex;
+
+        $logo          = asset(Storage::url('uploads/logo/'));
+        $company_logo  = Utility::getValByName('company_logo_dark');
+        $receipt_logo  = Utility::getValByName('receipt_logo');
+        $invoice_logo  = Utility::getValByName('invoice_logo');
+        if (!empty($receipt_logo)) {
+            $img = Utility::get_file('receipt_logo/') . $receipt_logo;
+        } elseif (!empty($invoice_logo)) {
+            $img = Utility::get_file('invoice_logo/') . $invoice_logo;
+        } else {
+            $img = asset($logo . '/' . (!empty($company_logo) ? $company_logo : 'logo-dark.png'));
+        }
+
+        return view('receipt.templates.template1', compact(
+            'invoice', 'preview', 'color', 'img', 'settings', 'customer',
+            'receiptNo', 'partyLabel', 'noticeText', 'footerText', 'displayName'
+        ));
     }
 
     public function invoice($invoice_id)
@@ -1337,6 +1295,66 @@ class InvoiceController extends Controller
     }
 
     /**
+     * Resolve bill-to party for print preview.
+     */
+    private function resolvePreviewParty($partyId, $partyType, $objUser): \stdClass
+    {
+        $customer = new \stdClass();
+
+        if ($partyId && in_array($partyType, ['customer', 'vendor', 'agent'], true)) {
+            if ($partyType === 'customer') {
+                $real = \App\Models\VClient::find($partyId);
+                if ($real) {
+                    $customer->billing_name     = $real->client_name ?? '';
+                    $customer->billing_address  = $real->address ?? '';
+                    $customer->billing_phone    = $real->passport_no ?? ($real->unique_code ?? '');
+                    $customer->billing_country  = '';
+                    $customer->party_code       = $real->unique_code ?? '';
+                } else {
+                    $real = \App\Models\Customer::where('created_by', $objUser->creatorId())->find($partyId);
+                    if ($real) {
+                        $customer->billing_name    = $real->billing_name ?? $real->name ?? '';
+                        $customer->billing_address = $real->billing_address ?? '';
+                        $customer->billing_city    = $real->billing_city ?? '';
+                        $customer->billing_state   = $real->billing_state ?? '';
+                        $customer->billing_country = $real->billing_country ?? '';
+                        $customer->billing_zip     = $real->billing_zip ?? '';
+                        $customer->billing_phone   = $real->billing_phone ?? $real->contact ?? '';
+                    }
+                }
+            } elseif ($partyType === 'vendor') {
+                $real = \App\Models\Vender::find($partyId);
+                if ($real) {
+                    $customer->billing_name    = $real->name ?? '';
+                    $customer->billing_address = $real->billing_address ?? '';
+                    $customer->billing_city    = $real->billing_city ?? '';
+                    $customer->billing_state   = $real->billing_state ?? '';
+                    $customer->billing_country = $real->billing_country ?? '';
+                    $customer->billing_zip     = $real->billing_zip ?? '';
+                    $customer->billing_phone   = $real->billing_phone ?? '';
+                }
+            } elseif ($partyType === 'agent') {
+                $real = \App\Models\Agent::find($partyId);
+                if ($real) {
+                    $customer->billing_name    = $real->agent_name ?? '';
+                    $customer->billing_address = $real->address ?? '';
+                    $customer->billing_phone   = $real->passport_number ?? ($real->unique_code ?? '');
+                    $customer->party_code      = $real->unique_code ?? '';
+                }
+            }
+        }
+
+        if (empty($customer->billing_name ?? '')) {
+            $customer->billing_name     = '<' . __('Customer Name') . '>';
+            $customer->billing_address  = '<' . __('Address') . '>';
+            $customer->billing_phone    = '<' . __('Phone') . '>';
+            $customer->billing_country  = '<' . __('Country') . '>';
+        }
+
+        return $customer;
+    }
+
+    /**
      * Build invoice preview line items from agent / client / vendor records.
      */
     private function buildPreviewLineItems($partyId, $partyType): array
@@ -1350,6 +1368,7 @@ class InvoiceController extends Controller
         $previewGrandTotal = 0;
         $previewPaid     = 0;
         $previewDue      = 0;
+        $previewRefund   = 0;
 
         $visaLabels = [
             'WV' => __('Work Permit Visa'),
@@ -1398,6 +1417,9 @@ class InvoiceController extends Controller
             $item->tax         = '';
             $item->unit        = null;
             $item->itemTax     = [];
+            $item->visa_label  = $visaLabel;
+            $item->country_name = $row->country_name ?? '';
+            $item->passport_no = $row->passport_no ?? '';
             $item->description = trim(implode(' · ', array_filter([
                 $visaLabel,
                 $row->country_name ?? null,
@@ -1414,6 +1436,7 @@ class InvoiceController extends Controller
             $previewGrandTotal += $lineAmount;
             $previewPaid += $paid;
             $previewDue += $due;
+            $previewRefund += $refund;
         }
 
         return [
@@ -1426,6 +1449,7 @@ class InvoiceController extends Controller
             'previewGrandTotal'  => $previewGrandTotal,
             'previewPaid'        => $previewPaid,
             'previewDue'         => $previewDue,
+            'previewRefund'      => $previewRefund,
         ];
     }
 

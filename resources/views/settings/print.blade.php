@@ -14,19 +14,54 @@ var _psAgents    = {!! json_encode($agents) !!};
 
 var _psSelectedParty = null; // { id, name, email, partyType: 'agent'|'client'|'vendor' }
 
+var _psDocType = 'invoice';
+
 // ── color live preview ──
 $(document).on('change', "input[name='invoice_color']", function () {
-    refreshPreview();
+    if (_psDocType === 'invoice') refreshPreview();
 });
+$(document).on('change', "input[name='receipt_header_color']", function () {
+    if (_psDocType === 'receipt') refreshReceiptPreview();
+});
+
+function partyQuery() {
+    if (!_psSelectedParty || !_psSelectedParty.id) return '';
+    var apiType = _psSelectedParty.partyType === 'client' ? 'customer' : _psSelectedParty.partyType;
+    return '&party_id=' + _psSelectedParty.id + '&party_type=' + apiType;
+}
 
 function refreshPreview() {
     var color = $("input[name='invoice_color']:checked").val() || 'ffffff';
-    var src   = '{{ url("/invoices/preview") }}/template1/' + color + '?t=' + Date.now();
-    if (_psSelectedParty && _psSelectedParty.id) {
-        var apiType = _psSelectedParty.partyType === 'client' ? 'customer' : _psSelectedParty.partyType;
-        src += '&party_id=' + _psSelectedParty.id + '&party_type=' + apiType;
-    }
+    var src   = '{{ url("/invoices/preview") }}/template1/' + color + '?t=' + Date.now() + partyQuery();
     document.getElementById('invoice_frame').src = src;
+}
+
+function refreshReceiptPreview() {
+    var color = $("input[name='receipt_header_color']:checked").val() || '1e3a8a';
+    var src   = '{{ url("/receipts/preview") }}/' + color + '?t=' + Date.now() + partyQuery();
+    document.getElementById('receipt_frame').src = src;
+}
+
+function refreshActivePreview() {
+    if (_psDocType === 'receipt') refreshReceiptPreview();
+    else refreshPreview();
+}
+
+function setDocType(type) {
+    _psDocType = type;
+    ['invoice','receipt'].forEach(function(t) {
+        var btn = document.getElementById('ps_doc_' + t);
+        if (btn) btn.classList.toggle('active', t === type);
+    });
+    document.getElementById('ps_invoice_settings').style.display = type === 'invoice' ? '' : 'none';
+    document.getElementById('ps_receipt_settings').style.display = type === 'receipt' ? '' : 'none';
+    document.getElementById('ps_preview_invoice').style.display = type === 'invoice' ? '' : 'none';
+    document.getElementById('ps_preview_receipt').style.display = type === 'receipt' ? '' : 'none';
+    var sub = document.getElementById('ps_party_sub');
+    if (sub) sub.textContent = type === 'receipt'
+        ? '{{ __("Preview money receipt for Agent, Client or Vendor") }}'
+        : '{{ __("Preview invoice for Agent, Client or Vendor") }}';
+    refreshActivePreview();
 }
 
 // logo preview
@@ -43,8 +78,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // After page reload (company info saved), refresh preview with cache bust
     @if(session('success'))
-    setTimeout(function() { refreshPreview(); }, 500);
+    setTimeout(function() { refreshActivePreview(); }, 500);
     @endif
+    var rInp = document.getElementById('receipt_logo');
+    var rImg = document.getElementById('receipt_image');
+    if (rInp && rImg) {
+        rInp.addEventListener('change', function () {
+            if (this.files[0]) { rImg.src = URL.createObjectURL(this.files[0]); rImg.style.display = 'block'; }
+        });
+    }
 });
 
 // ── Party type selector ──
@@ -86,6 +128,7 @@ function updatePartyDropdown() {
     align-items: start;
 }
 @media(max-width:1100px){ .ps-main-grid{ grid-template-columns:1fr; } }
+.ps-preview-col { position:relative; min-width:0; }
 
 /* ── Left panel ── */
 .ps-left { display:flex; flex-direction:column; gap:16px; }
@@ -259,6 +302,21 @@ function updatePartyDropdown() {
 .ps-slider:before { content:''; position:absolute; width:15px; height:15px; border-radius:50%; background:#fff; left:3px; top:3px; transition:.2s; box-shadow:0 1px 4px rgba(0,0,0,.2); }
 .ps-switch input:checked + .ps-slider { background:var(--c-blue); }
 .ps-switch input:checked + .ps-slider:before { transform:translateX(17px); }
+
+/* ── Document type tabs ── */
+.ps-doc-tabs {
+    display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:16px;
+}
+.ps-doc-tab {
+    padding:12px 10px; border-radius:12px; border:2px solid var(--c-border);
+    background:#fff; cursor:pointer; font-size:.8rem; font-weight:800;
+    color:var(--c-muted); display:flex; align-items:center; justify-content:center; gap:7px;
+    transition:all .18s;
+}
+.ps-doc-tab i { font-size:1rem; }
+.ps-doc-tab.active-invoice { border-color:#059669; color:#047857; background:#ecfdf5; }
+.ps-doc-tab.active-receipt { border-color:#2563eb; color:#1d4ed8; background:#eff6ff; }
+.ps-card-icon.purple { background:linear-gradient(135deg,#a78bfa,#7c3aed); box-shadow:0 5px 12px rgba(124,58,237,.25); }
 </style>
 
 <div class="ps-page">
@@ -269,13 +327,23 @@ function updatePartyDropdown() {
 {{-- ════════════════════════════════════════ --}}
 <div class="ps-left">
 
+    {{-- Document type: Invoice | Money Receipt --}}
+    <div class="ps-doc-tabs">
+        <button type="button" class="ps-doc-tab active-invoice" id="ps_doc_invoice" onclick="setDocType('invoice')">
+            <i class="ti ti-file-invoice"></i> {{ __('Invoice') }}
+        </button>
+        <button type="button" class="ps-doc-tab" id="ps_doc_receipt" onclick="setDocType('receipt')">
+            <i class="ti ti-receipt"></i> {{ __('Money Receipt') }}
+        </button>
+    </div>
+
     {{-- ── 1. Party Selector ── --}}
     <div class="ps-card">
         <div class="ps-card-head">
             <div class="ps-card-icon orange"><i class="ti ti-users"></i></div>
             <div>
                 <p class="ps-card-title">{{ __('Select Party') }}</p>
-                <p class="ps-card-sub">{{ __('Preview invoice for Agent, Client or Vendor') }}</p>
+                <p class="ps-card-sub" id="ps_party_sub">{{ __('Preview invoice for Agent, Client or Vendor') }}</p>
             </div>
         </div>
         <div class="ps-card-body">
@@ -324,7 +392,7 @@ function updatePartyDropdown() {
     </div>
 
     {{-- ── 2. Invoice Template Settings ── --}}
-    <div class="ps-card">
+    <div class="ps-card" id="ps_invoice_settings">
         <div class="ps-card-head">
             <div class="ps-card-icon green"><i class="ti ti-file-invoice"></i></div>
             <div>
@@ -369,6 +437,71 @@ function updatePartyDropdown() {
                 </div>
                 <button type="submit" class="ps-btn green">
                     <i class="ti ti-device-floppy"></i> {{ __('Save Changes') }}
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {{-- ── Money Receipt Settings ── --}}
+    <div class="ps-card" id="ps_receipt_settings" style="display:none;">
+        <div class="ps-card-head">
+            <div class="ps-card-icon purple"><i class="ti ti-receipt"></i></div>
+            <div>
+                <p class="ps-card-title">{{ __('Money Receipt Settings') }}</p>
+                <p class="ps-card-sub">{{ __('Color, logo & receipt text') }}</p>
+            </div>
+        </div>
+        <div class="ps-card-body">
+            <form method="post" action="{{ route('receipt.settings') }}" enctype="multipart/form-data">
+                @csrf
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Header Color') }}</label>
+                    <div class="ps-swatches">
+                        @foreach(App\Models\Utility::templateData()['colors'] as $key => $rcolor)
+                            <label class="ps-swatch-label">
+                                <input name="receipt_header_color" type="radio" value="{{ $rcolor }}"
+                                    {{ (isset($settings['receipt_header_color']) && $settings['receipt_header_color'] == $rcolor) ? 'checked' : ((!isset($settings['receipt_header_color']) && $rcolor == '1e3a8a') ? 'checked' : '') }}>
+                                <span class="ps-swatch" style="background:#{{ $rcolor }}"></span>
+                            </label>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="ps-divider"></div>
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Receipt Logo') }}</label>
+                    @php $cur_receipt_logo = \App\Models\Utility::getValByName('receipt_logo'); @endphp
+                    @if(!empty($cur_receipt_logo))
+                        <div class="ps-current-logo">
+                            <img src="{{ \App\Models\Utility::get_file('receipt_logo/') . $cur_receipt_logo }}" alt="Logo">
+                            <span>✓ {{ __('Current logo active') }}</span>
+                        </div>
+                    @endif
+                    <label class="ps-upload" for="receipt_logo">
+                        <i class="ti ti-cloud-upload ps-upload-icon"></i>
+                        <span class="ps-upload-text">{{ __('Click to upload receipt logo') }}</span>
+                        <input type="file" name="receipt_logo" id="receipt_logo" accept="image/*">
+                    </label>
+                    <img id="receipt_image" class="ps-logo-preview" src="" alt="">
+                </div>
+                <div class="ps-divider"></div>
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Display Company Name') }}</label>
+                    <input type="text" name="receipt_company_name" class="ps-input"
+                        value="{{ $settings['receipt_company_name'] ?? '' }}"
+                        placeholder="{{ $settings['company_name'] ?? __('Company Name') }}">
+                </div>
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Notice Text') }}</label>
+                    <textarea name="receipt_notice_text" class="ps-input" rows="2" style="height:auto;background-image:none;">{{ $settings['receipt_notice_text'] ?? __("Money receipts will not be considered valid without the MD's seal and signature.") }}</textarea>
+                </div>
+                <div class="ps-field">
+                    <label class="ps-label">{{ __('Footer Text') }}</label>
+                    <input type="text" name="receipt_footer_text" class="ps-input"
+                        value="{{ $settings['receipt_footer_text'] ?? '' }}"
+                        placeholder="{{ __('Optional footer line') }}">
+                </div>
+                <button type="submit" class="ps-btn green" style="background:linear-gradient(135deg,#818cf8,#6366f1);box-shadow:0 8px 20px rgba(99,102,241,.25);">
+                    <i class="ti ti-device-floppy"></i> {{ __('Save Receipt Settings') }}
                 </button>
             </form>
         </div>
@@ -450,7 +583,8 @@ function updatePartyDropdown() {
 {{-- ════════════════════════════════════════ --}}
 {{-- RIGHT: LIVE PREVIEW --}}
 {{-- ════════════════════════════════════════ --}}
-<div class="ps-preview">
+<div class="ps-preview-col">
+<div id="ps_preview_invoice" class="ps-preview">
     <div class="ps-preview-bar">
         <span class="ps-dot" style="background:#ef4444;"></span>
         <span class="ps-dot" style="background:#f59e0b;"></span>
@@ -465,6 +599,20 @@ function updatePartyDropdown() {
     <iframe id="invoice_frame" class="ps-iframe"
         src="{{ route('invoice.preview', [$i_tpl, $i_color]) }}"></iframe>
 </div>
+
+<div id="ps_preview_receipt" class="ps-preview" style="display:none;">
+    <div class="ps-preview-bar">
+        <span class="ps-dot" style="background:#ef4444;"></span>
+        <span class="ps-dot" style="background:#f59e0b;"></span>
+        <span class="ps-dot" style="background:#22c55e;"></span>
+        <span class="ps-preview-label">{{ __('Live Preview — Money Receipt') }}</span>
+        <span id="ps_preview_party_label_rc" style="margin-left:auto;font-size:.72rem;font-weight:700;color:#6366f1;background:#eef2ff;padding:3px 10px;border-radius:20px;display:none;"></span>
+    </div>
+    @php $r_color = $settings['receipt_header_color'] ?? '1e3a8a'; @endphp
+    <iframe id="receipt_frame" class="ps-iframe"
+        src="{{ route('receipt.preview', $r_color) }}"></iframe>
+</div>
+</div>{{-- /ps-preview-col --}}
 
 </div>{{-- /ps-main-grid --}}
 </div>{{-- /ps-page --}}
@@ -506,7 +654,10 @@ function setPartyType(type) {
 function clearPartyPreview() {
     document.getElementById('ps_party_info').style.display = 'none';
     document.getElementById('ps_preview_party_label').style.display = 'none';
+    var lblRc = document.getElementById('ps_preview_party_label_rc');
+    if (lblRc) lblRc.style.display = 'none';
     _psSelectedParty = null;
+    refreshActivePreview();
 }
 
 function onPartySelect(id) {
@@ -535,13 +686,13 @@ function onPartySelect(id) {
 
     document.getElementById('ps_party_info').style.display = 'block';
 
-    // preview label
     var lbl = document.getElementById('ps_preview_party_label');
     lbl.textContent = item.name;
     lbl.style.display = 'inline-block';
+    var lblRc = document.getElementById('ps_preview_party_label_rc');
+    if (lblRc) { lblRc.textContent = item.name; lblRc.style.display = 'inline-block'; }
 
-    // update preview iframe with party data
-    refreshPreview();
+    refreshActivePreview();
 
   // Load address / contact for the info card
     var apiType = type === 'client' ? 'customer' : type;
