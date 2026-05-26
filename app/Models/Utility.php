@@ -25,14 +25,23 @@ class Utility extends Model
     public static function getSetting()
     {
         if (self::$getsettings == null) {
-            $data = DB::table('settings');
-            $data = $data->where('created_by', '=', 1)->get();
-            if (count($data) == 0) {
+            $createdBy = 1;
+            if (\Auth::check()) {
+                $createdBy = \Auth::user()->creatorId();
+            }
+            $data = DB::table('settings')->where('created_by', '=', $createdBy)->get();
+            if (count($data) == 0 && $createdBy !== 1) {
                 $data = DB::table('settings')->where('created_by', '=', 1)->get();
             }
             self::$getsettings = $data;
         }
         return self::$getsettings;
+    }
+
+    public static function clearSettingsCache(): void
+    {
+        self::$getsettings = null;
+        self::$getsettingsid = null;
     }
 
     public static function getSettingById($id)
@@ -4175,6 +4184,40 @@ class Utility extends Model
             ];
             return $res;
         }
+    }
+
+    /**
+     * Public URL for print assets (signatures, logos) on local or cloud storage.
+     */
+    public static function printFileUrl(string $directory, ?string $filename): string
+    {
+        if (empty($filename)) {
+            return '';
+        }
+
+        $directory = trim($directory, '/') . '/';
+        $storage   = self::getStorageSetting();
+        $driver    = $storage['storage_setting'] ?? 'local';
+
+        if (in_array($driver, ['s3', 'wasabi'], true)) {
+            try {
+                return \Storage::disk($driver)->url($directory . $filename);
+            } catch (\Throwable $e) {
+                return self::get_file($directory) . $filename;
+            }
+        }
+
+        $publicPath = storage_path('app/public/' . $directory . $filename);
+        if (is_file($publicPath)) {
+            return asset('storage/' . $directory . $filename);
+        }
+
+        $legacyPath = storage_path($directory . $filename);
+        if (is_file($legacyPath)) {
+            return url('print-files/' . trim($directory, '/') . '/' . rawurlencode($filename));
+        }
+
+        return self::get_file($directory) . $filename;
     }
 
     public static function get_file($path)

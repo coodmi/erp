@@ -773,7 +773,6 @@ function updatePartyDropdown() {
                     <label class="ps-label">{{ __('Signatures') }}</label>
                     <p class="ps-card-sub" style="margin:0 0 12px;">{{ __('Upload signature images for Cashier, Manager and MD. Shown on money receipts.') }}</p>
                     @php
-                        $sigDir = \App\Models\Utility::get_file('signatures/');
                         $sigSlots = [
                             ['field' => 'signature_cashier', 'label' => __('Cashier Signature'), 'preview' => 'sig_preview_cashier'],
                             ['field' => 'signature_manager', 'label' => __('Manager Signature'), 'preview' => 'sig_preview_manager'],
@@ -800,8 +799,8 @@ function updatePartyDropdown() {
                                     @php $curSig = $settings[$slot['field']] ?? ''; @endphp
                                     <div class="ps-sig-slot{{ $i === 0 ? ' is-active' : '' }}" role="tab" data-index="{{ $i }}">
                                         <label class="ps-label">{{ $slot['label'] }}</label>
-                                        @if(!empty($curSig))
-                                            <img src="{{ $sigDir . $curSig }}" alt="{{ $slot['label'] }}" class="ps-sig-current">
+                                @if(!empty($curSig))
+                                    <img src="{{ \App\Models\Utility::printFileUrl('signatures', $curSig) }}" alt="{{ $slot['label'] }}" class="ps-sig-current">
                                             <span style="font-size:.68rem;color:#059669;font-weight:700;">✓ {{ __('Uploaded') }}</span>
                                         @endif
                                         <label class="ps-upload ps-sig-upload" for="{{ $slot['field'] }}">

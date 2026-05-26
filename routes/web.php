@@ -172,6 +172,10 @@ Route::get('/vclients/dashboard', function () {
 
 
  
+Route::get('print-files/{dir}/{filename}', [SystemController::class, 'servePrintFile'])
+    ->where('dir', 'signatures|invoice_logo|receipt_logo')
+    ->where('filename', '.+');
+
 Route::get('/vclients', function (Request $request) {
     
     $printclient_id = $request->input('printclient_id');

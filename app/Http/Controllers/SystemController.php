@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 use Cookie;
 use Illuminate\Support\Facades\Artisan;
 
@@ -1185,12 +1186,17 @@ class SystemController extends Controller
             if (!$request->hasFile($field)) {
                 continue;
             }
-            $ext  = strtolower($request->file($field)->getClientOriginalExtension() ?: 'png');
+            $file = $request->file($field);
+            $ext  = strtolower($file->getClientOriginalExtension() ?: 'png');
             $name = $basename . '.' . $ext;
-            $path = Utility::upload_file($request, $field, $name, 'signatures/', $validation);
-            if ($path['flag'] == 0) {
-                return redirect()->back()->with('error', __($path['msg']));
+            $validator = \Validator::make(
+                [$field => $file],
+                [$field => $validation]
+            );
+            if ($validator->fails()) {
+                return redirect()->back()->with('error', $validator->messages()->first());
             }
+            Storage::disk('public')->putFileAs('signatures', $file, $name);
             $post[$field] = $name;
         }
 
@@ -1202,7 +1208,29 @@ class SystemController extends Controller
             );
         }
 
+        Utility::clearSettingsCache();
+
         return redirect()->back()->with('success', __('Receipt settings updated successfully'));
+    }
+
+    /**
+     * Serve legacy print uploads stored under storage/{dir}/ (local disk).
+     */
+    public function servePrintFile(string $dir, string $filename)
+    {
+        $allowed = ['signatures', 'invoice_logo', 'receipt_logo'];
+        if (!in_array($dir, $allowed, true)) {
+            abort(404);
+        }
+
+        $filename = basename($filename);
+        $path     = storage_path($dir . DIRECTORY_SEPARATOR . $filename);
+
+        if (!is_file($path)) {
+            abort(404);
+        }
+
+        return response()->file($path);
     }
 
     public function posPrintIndex()
