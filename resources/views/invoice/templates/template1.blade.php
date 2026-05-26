@@ -223,12 +223,12 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
         @if(!empty($customer->billing_name))
           <div class="inv-addr-name">{{ $customer->billing_name }}</div>
           <div class="inv-addr-info">
-            @if($customer->billing_address){{ $customer->billing_address }}<br>@endif
-            @if($customer->billing_city){{ $customer->billing_city }}@endif
-            @if($customer->billing_state), {{ $customer->billing_state }}@endif
-            @if($customer->billing_zip) {{ $customer->billing_zip }}@endif
-            @if($customer->billing_country)<br>{{ $customer->billing_country }}@endif
-            @if($customer->billing_phone)<br>{{ $customer->billing_phone }}@endif
+            @if(!empty($customer->billing_address ?? '')){{ $customer->billing_address }}<br>@endif
+            @if(!empty($customer->billing_city ?? '')){{ $customer->billing_city }}@endif
+            @if(!empty($customer->billing_state ?? '')), {{ $customer->billing_state }}@endif
+            @if(!empty($customer->billing_zip ?? '')) {{ $customer->billing_zip }}@endif
+            @if(!empty($customer->billing_country ?? ''))<br>{{ $customer->billing_country }}@endif
+            @if(!empty($customer->billing_phone ?? ''))<br>{{ $customer->billing_phone }}@endif
           </div>
         @else<div class="inv-addr-info">—</div>@endif
       </div>

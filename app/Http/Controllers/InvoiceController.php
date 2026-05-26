@@ -1351,7 +1351,16 @@ class InvoiceController extends Controller
      */
     private function resolvePreviewParty($partyId, $partyType, $creatorId): \stdClass
     {
-        $customer = new \stdClass();
+        $customer = (object) [
+            'billing_name'     => '',
+            'billing_address'  => '',
+            'billing_city'     => '',
+            'billing_state'    => '',
+            'billing_country'  => '',
+            'billing_zip'      => '',
+            'billing_phone'    => '',
+            'party_code'       => '',
+        ];
 
         if ($partyId && in_array($partyType, ['customer', 'vendor', 'agent'], true)) {
             if ($partyType === 'customer') {
@@ -1360,7 +1369,6 @@ class InvoiceController extends Controller
                     $customer->billing_name     = $real->client_name ?? '';
                     $customer->billing_address  = $real->address ?? '';
                     $customer->billing_phone    = $real->passport_no ?? ($real->unique_code ?? '');
-                    $customer->billing_country  = '';
                     $customer->party_code       = $real->unique_code ?? '';
                 } elseif ($creatorId) {
                     $real = \App\Models\Customer::where('created_by', $creatorId)->find($partyId);
@@ -1399,11 +1407,11 @@ class InvoiceController extends Controller
             }
         }
 
-        if (empty($customer->billing_name ?? '')) {
-            $customer->billing_name     = '<' . __('Customer Name') . '>';
-            $customer->billing_address  = '<' . __('Address') . '>';
-            $customer->billing_phone    = '<' . __('Phone') . '>';
-            $customer->billing_country  = '<' . __('Country') . '>';
+        if ($customer->billing_name === '') {
+            $customer->billing_name    = '<' . __('Customer Name') . '>';
+            $customer->billing_address = '<' . __('Address') . '>';
+            $customer->billing_phone   = '<' . __('Phone') . '>';
+            $customer->billing_country = '<' . __('Country') . '>';
         }
 
         return $customer;
