@@ -68,12 +68,16 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-
 /* ── body ── */
 .inv-body{padding:28px 36px 36px}
 
-/* address row */
-.inv-addr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px}
-.inv-addr-card{background:var(--a10);border:1px solid var(--a20);border-radius:12px;padding:16px 18px}
+/* address row: company left, client right */
+.inv-addr-row{display:flex;justify-content:space-between;align-items:flex-start;gap:32px;margin-bottom:28px}
+.inv-addr-block{flex:0 1 auto;min-width:0;max-width:48%}
+.inv-addr-from{align-self:flex-start}
+.inv-addr-to{margin-left:auto;text-align:right;align-self:flex-start}
 .inv-addr-tag{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:5px}
-.inv-addr-tag::before{content:'';width:14px;height:2px;background:var(--accent);border-radius:2px;flex-shrink:0}
-.inv-addr-name{font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:3px}
+.inv-addr-from .inv-addr-tag::before{content:'';width:14px;height:2px;background:var(--accent);border-radius:2px;flex-shrink:0}
+.inv-addr-to .inv-addr-tag{justify-content:flex-end}
+.inv-addr-to .inv-addr-tag::after{content:'';width:14px;height:2px;background:var(--accent);border-radius:2px;flex-shrink:0}
+.inv-addr-name{font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:4px}
 .inv-addr-info{font-size:12px;color:var(--t2);line-height:1.75}
 
 /* status */
@@ -119,6 +123,8 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-
 /* RTL */
 html[dir="rtl"] .inv-doc-title{text-align:left}
 html[dir="rtl"] .inv-meta td:last-child{text-align:left}
+html[dir="rtl"] .inv-addr-to{margin-left:0;margin-right:auto;text-align:left}
+html[dir="rtl"] .inv-addr-to .inv-addr-tag{justify-content:flex-start}
 html[dir="rtl"] .inv-tbl thead th:last-child{text-align:left}
 html[dir="rtl"] .inv-tbl tbody td:last-child{text-align:left}
 html[dir="rtl"] .inv-tbl tfoot td:last-child{text-align:left}
@@ -129,7 +135,10 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
   .inv-header-inner{flex-direction:column}
   .inv-head-right{align-items:flex-start}
   .inv-doc-title{text-align:left;font-size:28px}
-  .inv-addr-grid{grid-template-columns:1fr}
+  .inv-addr-row{flex-direction:column;gap:20px}
+  .inv-addr-block{max-width:100%}
+  .inv-addr-to{margin-left:0;text-align:left}
+  .inv-addr-to .inv-addr-tag{justify-content:flex-start}
   .inv-totals{width:100%}
 }
 @media print{
@@ -178,10 +187,9 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
   {{-- BODY --}}
   <div class="inv-body">
 
-    {{-- Addresses --}}
-    <div class="inv-addr-grid">
-      {{-- FROM (Company) --}}
-      <div class="inv-addr-card">
+    {{-- Addresses: company left, client right --}}
+    <div class="inv-addr-row">
+      <div class="inv-addr-block inv-addr-from">
         <div class="inv-addr-tag">{{ __('From') }}</div>
         <div class="inv-addr-name">{{ $settings['company_name'] ?? '' }}</div>
         <div class="inv-addr-info">
@@ -194,8 +202,7 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
           @if(!empty($settings['company_telephone']))<br>{{ $settings['company_telephone'] }}@endif
         </div>
       </div>
-      {{-- BILL TO --}}
-      <div class="inv-addr-card">
+      <div class="inv-addr-block inv-addr-to">
         <div class="inv-addr-tag">{{ __('Bill To') }}</div>
         @if(!empty($customer->billing_name))
           <div class="inv-addr-name">{{ $customer->billing_name }}</div>
@@ -209,7 +216,6 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
           </div>
         @else<div class="inv-addr-info">—</div>@endif
       </div>
-
     </div>
 
     {{-- Status --}}
