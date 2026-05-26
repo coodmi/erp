@@ -1,0 +1,45 @@
+---
+description: After code changes, push to GitHub and give live server update commands
+alwaysApply: true
+---
+
+# Auto git push + live deploy commands
+
+When you finish **any code change** in this project (features, fixes, config, views, routes):
+
+1. **Commit and push** to `origin/main` unless the user explicitly says not to push.
+   - Work in `/erp` (git root).
+   - Do not commit secrets (`.env`, credentials).
+   - Use a clear commit message (why, not just what).
+   - If push fails, fix and retry; report the blocker if it cannot be resolved.
+
+2. **Always end the response** with the live update block below (even if the user did not ask).
+
+## Live site update commands
+
+Production path: `/home/khanplac/erp.erazehan.com`
+
+```bash
+cd /home/khanplac/erp.erazehan.com
+git pull origin main
+php artisan view:clear
+php artisan cache:clear
+php artisan config:clear
+```
+
+If the UI still shows old content:
+
+```bash
+php artisan optimize:clear
+```
+
+Optional one-liner on the server:
+
+```bash
+cd /home/khanplac/erp.erazehan.com && git pull origin main && php artisan view:clear && php artisan cache:clear && php artisan config:clear
+```
+
+## Exceptions
+
+- Question-only or review-only tasks: no commit/push unless changes were made.
+- User says "don't push" or "local only": skip push but still offer deploy commands if they deployed manually earlier.
