@@ -69,7 +69,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-
 .inv-body{padding:28px 36px 36px}
 
 /* address row */
-.inv-addr-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px}
+.inv-addr-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px}
 .inv-addr-card{background:var(--a10);border:1px solid var(--a20);border-radius:12px;padding:16px 18px}
 .inv-addr-tag{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:5px}
 .inv-addr-tag::before{content:'';width:14px;height:2px;background:var(--accent);border-radius:2px;flex-shrink:0}
@@ -194,6 +194,21 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
 
     {{-- Addresses --}}
     <div class="inv-addr-grid">
+      {{-- FROM (Company) --}}
+      <div class="inv-addr-card">
+        <div class="inv-addr-tag">{{ __('From') }}</div>
+        <div class="inv-addr-name">{{ $settings['company_name'] ?? '' }}</div>
+        <div class="inv-addr-info">
+          @if(!empty($settings['mail_from_address'])){{ $settings['mail_from_address'] }}<br>@endif
+          @if(!empty($settings['company_address'])){{ $settings['company_address'] }}<br>@endif
+          @if(!empty($settings['company_city'])){{ $settings['company_city'] }}@endif
+          @if(!empty($settings['company_state'])), {{ $settings['company_state'] }}@endif
+          @if(!empty($settings['company_zipcode'])) {{ $settings['company_zipcode'] }}@endif
+          @if(!empty($settings['company_country']))<br>{{ $settings['company_country'] }}@endif
+          @if(!empty($settings['company_telephone']))<br>{{ $settings['company_telephone'] }}@endif
+        </div>
+      </div>
+      {{-- BILL TO --}}
       <div class="inv-addr-card">
         <div class="inv-addr-tag">{{ __('Bill To') }}</div>
         @if(!empty($customer->billing_name))

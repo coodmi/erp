@@ -249,6 +249,20 @@
             <tbody>
             <tr>
                 <td>
+                    <strong style="margin-bottom: 10px; display:block;">{{__('From')}}:</strong>
+                    <p>
+                        @if(!empty($settings['company_name']))<strong>{{$settings['company_name']}}</strong><br>@endif
+                        @if(!empty($settings['company_address'])){{$settings['company_address']}}<br>@endif
+                        @if(!empty($settings['company_city'])){{$settings['company_city']}}, @endif
+                        @if(!empty($settings['company_state'])){{$settings['company_state']}}@endif
+                        @if(!empty($settings['company_zipcode'])) - {{$settings['company_zipcode']}}@endif
+                        @if(!empty($settings['company_city']) || !empty($settings['company_state']))<br>@endif
+                        @if(!empty($settings['company_country'])){{$settings['company_country']}}<br>@endif
+                        @if(!empty($settings['company_telephone'])){{$settings['company_telephone']}}<br>@endif
+                        @if(!empty($settings['mail_from_address'])){{$settings['mail_from_address']}}@endif
+                    </p>
+                </td>
+                <td>
                     <strong style="margin-bottom: 10px; display:block;">{{__('Bill To')}}:</strong>
                     @if(!empty($customer->billing_name))
                         <p>

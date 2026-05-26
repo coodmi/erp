@@ -165,6 +165,20 @@
 
 
                       <div class="row">
+                          <div class="col">
+                              <small>
+                                  <strong>{{__('From')}} :</strong><br>
+                                  @if(!empty($settings['company_name']))<strong>{{$settings['company_name']}}</strong><br>@endif
+                                  @if(!empty($settings['company_address'])){{$settings['company_address']}}<br>@endif
+                                  @if(!empty($settings['company_city'])){{$settings['company_city']}}, @endif
+                                  @if(!empty($settings['company_state'])){{$settings['company_state']}}@endif
+                                  @if(!empty($settings['company_zipcode'])) - {{$settings['company_zipcode']}}@endif
+                                  @if(!empty($settings['company_city']) || !empty($settings['company_state']))<br>@endif
+                                  @if(!empty($settings['company_country'])){{$settings['company_country']}}<br>@endif
+                                  @if(!empty($settings['company_telephone'])){{$settings['company_telephone']}}<br>@endif
+                                  @if(!empty($settings['mail_from_address'])){{$settings['mail_from_address']}}@endif
+                              </small>
+                          </div>
                           @if(!empty($customer->billing_name))
                               <div class="col">
                                   <small class="font-style">

@@ -196,21 +196,20 @@
         <table class="vertical-align-top">
             <tbody >
             <tr>
-                @if (!empty($settings['company_name']) && !empty($settings['mail_from_address']) && !empty($settings['company_address']))
                 <td style="font-size: 13px;">
                     <strong style="margin-bottom: 10px; display:block;">{{__('From:')}}</strong>
                     <p>
-                        @if($settings['company_name']){{$settings['company_name']}}@endif<br>
-                        @if($settings['mail_from_address']){{$settings['mail_from_address']}}@endif<br><br>
-                        @if($settings['company_address']){{$settings['company_address']}}@endif
-                        @if($settings['company_city']) <br> {{$settings['company_city']}}, @endif
-                        @if($settings['company_state']){{$settings['company_state']}}@endif
-                        @if($settings['company_zipcode']) - {{$settings['company_zipcode']}}@endif
-                        @if($settings['company_country']) <br>{{$settings['company_country']}}@endif
-                        @if($settings['company_telephone']){{$settings['company_telephone']}}@endif<br>
+                        @if(!empty($settings['company_name']))<strong>{{$settings['company_name']}}</strong><br>@endif
+                        @if(!empty($settings['company_address'])){{$settings['company_address']}}<br>@endif
+                        @if(!empty($settings['company_city'])){{$settings['company_city']}}, @endif
+                        @if(!empty($settings['company_state'])){{$settings['company_state']}}@endif
+                        @if(!empty($settings['company_zipcode'])) - {{$settings['company_zipcode']}}@endif
+                        @if(!empty($settings['company_city']) || !empty($settings['company_state']))<br>@endif
+                        @if(!empty($settings['company_country'])){{$settings['company_country']}}<br>@endif
+                        @if(!empty($settings['company_telephone'])){{$settings['company_telephone']}}<br>@endif
+                        @if(!empty($settings['mail_from_address'])){{$settings['mail_from_address']}}@endif
                     </p>
                 </td>
-                @endif
                 <td  style="font-size: 13px;">
                     <strong style="margin-bottom: 10px; display:block;">{{__('Bill To:')}}</strong>
                     @if(!empty($customer->billing_name))
