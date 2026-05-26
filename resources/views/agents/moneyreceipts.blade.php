@@ -26,9 +26,12 @@
     $client = !empty($results) ? $results[0] : null;
     $visaLabels = ['WV'=>'Work Permit Visa','SV'=>'Student Visa','TV'=>'Tourist Visa','BV'=>'Business Visa','OV'=>'Others'];
 
-    // Use invoice_logo if uploaded, else fall back to company_logo_dark
+    // Use receipt_logo → invoice_logo → company_logo_dark
+    $receipt_logo = \App\Models\Utility::getValByName('receipt_logo');
     $invoice_logo = \App\Models\Utility::getValByName('invoice_logo');
-    if (!empty($invoice_logo)) {
+    if (!empty($receipt_logo)) {
+        $logoImg = \App\Models\Utility::get_file('receipt_logo/') . $receipt_logo;
+    } elseif (!empty($invoice_logo)) {
         $logoImg = \App\Models\Utility::get_file('invoice_logo/') . $invoice_logo;
     } else {
         $logoImg = $logo . '/' . ($company_logo ?: 'logo-dark.png');
