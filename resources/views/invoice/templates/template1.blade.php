@@ -149,25 +149,11 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
   <div class="inv-header">
     <div class="inv-header-inner">
 
-      {{-- LEFT: logo → qr (stacked) + company --}}
+      {{-- LEFT: logo → qr (stacked) --}}
       <div class="inv-head-left">
         <img class="inv-logo" src="{{ $img }}" alt="Logo">
         <div class="inv-qr-box {{ $isLight ? 'qr-normal' : 'qr-invert' }}">
           {!! DNS2D::getBarcodeHTML(route('invoice.link.copy',\Crypt::encrypt($invoice->invoice_id)),"QRCODE",2,2) !!}
-        </div>
-        <div>
-          <div class="inv-company-name">{{ $settings['company_name'] ?? '' }}</div>
-          <div class="inv-company-detail">
-            @if(!empty($settings['mail_from_address'])){{ $settings['mail_from_address'] }}<br>@endif
-            @if(!empty($settings['company_address'])){{ $settings['company_address'] }}@endif
-            @if(!empty($settings['company_city'])), {{ $settings['company_city'] }}@endif
-            @if(!empty($settings['company_state'])) {{ $settings['company_state'] }}@endif
-            @if(!empty($settings['company_zipcode'])) {{ $settings['company_zipcode'] }}@endif
-            @if(!empty($settings['company_country']))<br>{{ $settings['company_country'] }}@endif
-            @if(!empty($settings['company_telephone']))<br>{{ $settings['company_telephone'] }}@endif
-            @if(!empty($settings['registration_number']))<br>{{ __('Reg') }}: {{ $settings['registration_number'] }}@endif
-            @if(!empty($settings['vat_gst_number_switch']) && $settings['vat_gst_number_switch']=='on' && !empty($settings['vat_number']))<br>{{ $settings['tax_type'] ?? 'VAT' }}: {{ $settings['vat_number'] }}@endif
-          </div>
         </div>
       </div>
 
