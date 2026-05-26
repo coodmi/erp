@@ -68,12 +68,12 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-
 
 /* address row */
 .inv-addr-row{display:flex;justify-content:space-between;align-items:flex-start;gap:32px;margin-bottom:28px}
-.inv-addr-block{flex:0 1 auto;min-width:0;max-width:48%}
+.inv-addr-block{flex:0 1 auto;min-width:0;max-width:48%;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:16px 18px}
 .inv-addr-to{margin-left:auto;text-align:right}
-.inv-addr-tag{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:8px;display:flex;align-items:center;gap:5px}
-.inv-addr-from .inv-addr-tag::before{content:'';width:14px;height:2px;background:var(--accent);border-radius:2px;flex-shrink:0}
+.inv-addr-tag{font-size:9.5px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#64748b;margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.inv-addr-from .inv-addr-tag::before{content:'';width:14px;height:2px;background:#94a3b8;border-radius:2px;flex-shrink:0}
 .inv-addr-to .inv-addr-tag{justify-content:flex-end}
-.inv-addr-to .inv-addr-tag::after{content:'';width:14px;height:2px;background:var(--accent);border-radius:2px;flex-shrink:0}
+.inv-addr-to .inv-addr-tag::after{content:'';width:14px;height:2px;background:#94a3b8;border-radius:2px;flex-shrink:0}
 .inv-addr-name{font-size:13.5px;font-weight:700;color:var(--text);margin-bottom:4px}
 .inv-addr-info{font-size:12px;color:var(--t2);line-height:1.75}
 

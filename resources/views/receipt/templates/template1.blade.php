@@ -67,12 +67,10 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:13px;color:#0f172a;backgro
 /* ── Bill-to / Company cards ── */
 .cards table{width:100%;border-collapse:collapse;margin-bottom:22px}
 .card-cell{width:48%;vertical-align:top;padding:16px 18px;border-radius:10px}
-.card-from{background:#f0f9ff;border:1px solid #bae6fd}
-.card-company{background:#f0fdf4;border:1px solid #bbf7d0;text-align:right}
+.card-from{background:#f8fafc;border:1px solid #e2e8f0}
+.card-company{background:#f8fafc;border:1px solid #e2e8f0;text-align:right}
 .card-spacer{width:4%}
-.card-tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:7px}
-.card-from .card-tag{color:#0284c7}
-.card-company .card-tag{color:#059669}
+.card-tag{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:7px;color:#64748b}
 .card-name{font-size:14px;font-weight:800;color:#0f172a;margin-bottom:5px}
 .card-info{font-size:11.5px;color:#475569;line-height:1.85}
 .card-info span{display:block}
