@@ -172,6 +172,15 @@ class Utility extends Model
             "pos_logo" => "",
             "contract_prefix" => "#CON",
 
+            "receipt_logo" => "",
+            "receipt_header_color" => "1e3a8a",
+            "receipt_company_name" => "",
+            "receipt_company_address" => "",
+            "receipt_company_phone" => "",
+            "receipt_company_email" => "",
+            "receipt_footer_text" => "",
+            "receipt_notice_text" => "Money receipts will not be considered valid without the MD's seal and signature.",
+
             "barcode_type" => "code128",
             "barcode_format" => "css",
 
