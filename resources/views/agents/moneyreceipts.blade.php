@@ -30,9 +30,9 @@
     $receipt_logo = \App\Models\Utility::getValByName('receipt_logo');
     $invoice_logo = \App\Models\Utility::getValByName('invoice_logo');
     if (!empty($receipt_logo)) {
-        $logoImg = \App\Models\Utility::get_file('receipt_logo/') . $receipt_logo;
+        $logoImg = \App\Models\Utility::printFileUrl('receipt_logo', $receipt_logo);
     } elseif (!empty($invoice_logo)) {
-        $logoImg = \App\Models\Utility::get_file('invoice_logo/') . $invoice_logo;
+        $logoImg = \App\Models\Utility::printFileUrl('invoice_logo', $invoice_logo);
     } else {
         $logoImg = $logo . '/' . ($company_logo ?: 'logo-dark.png');
     }

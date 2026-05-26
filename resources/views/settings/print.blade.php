@@ -691,7 +691,7 @@ function updatePartyDropdown() {
                     @php $cur_invoice_logo = \App\Models\Utility::getValByName('invoice_logo'); @endphp
                     @if(!empty($cur_invoice_logo))
                         <div class="ps-current-logo">
-                            <img src="{{ \App\Models\Utility::get_file('invoice_logo/') . $cur_invoice_logo }}" alt="Logo">
+                            <img src="{{ \App\Models\Utility::printFileUrl('invoice_logo', $cur_invoice_logo) }}" alt="Logo">
                             <span>✓ {{ __('Current logo active') }}</span>
                         </div>
                     @endif
@@ -740,7 +740,7 @@ function updatePartyDropdown() {
                     @php $cur_receipt_logo = \App\Models\Utility::getValByName('receipt_logo'); @endphp
                     @if(!empty($cur_receipt_logo))
                         <div class="ps-current-logo">
-                            <img src="{{ \App\Models\Utility::get_file('receipt_logo/') . $cur_receipt_logo }}" alt="Logo">
+                            <img src="{{ \App\Models\Utility::printFileUrl('receipt_logo', $cur_receipt_logo) }}" alt="Logo">
                             <span>✓ {{ __('Current logo active') }}</span>
                         </div>
                     @endif

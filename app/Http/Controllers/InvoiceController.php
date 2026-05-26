@@ -1083,9 +1083,9 @@ class InvoiceController extends Controller
         $receipt_logo  = Utility::getValByName('receipt_logo');
         $invoice_logo  = Utility::getValByName('invoice_logo');
         if (!empty($receipt_logo)) {
-            $img = Utility::get_file('receipt_logo/') . $receipt_logo;
+            $img = Utility::printFileUrl('receipt_logo', $receipt_logo);
         } elseif (!empty($invoice_logo)) {
-            $img = Utility::get_file('invoice_logo/') . $invoice_logo;
+            $img = Utility::printFileUrl('invoice_logo', $invoice_logo);
         } else {
             $img = asset($logo . '/' . (!empty($company_logo) ? $company_logo : 'logo-dark.png'));
         }
