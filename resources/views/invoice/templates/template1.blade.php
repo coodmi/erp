@@ -106,10 +106,20 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-
 .inv-tot-row.due{padding:8px 13px;background:var(--a10);border:1px solid var(--a20);border-radius:9px;margin-top:7px;font-weight:700;color:var(--accent);border-bottom:none}
 .inv-tot-row.due span:last-child{color:var(--accent)}
 
-/* footer */
+/* footer notes */
 .inv-footer{margin-top:28px;padding:18px 22px;background:var(--a10);border:1px solid var(--a20);border-radius:12px}
 .inv-footer-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px}
 .inv-footer-notes{font-size:12px;color:var(--t2);line-height:1.7}
+
+/* ── branded footer bar ── */
+.inv-ftr{background:var(--hbg);padding:0}
+.inv-ftr table{width:100%;border-collapse:collapse}
+.inv-ftr td{padding:16px 32px;vertical-align:middle}
+.inv-ftr-logo img{max-height:36px;max-width:140px;object-fit:contain;display:block}
+.inv-ftr-addr{font-size:10px;color:rgba(255,255,255,.65);margin-top:5px}
+.inv-ftr-info{text-align:right}
+.inv-ftr-info p{font-size:11px;color:rgba(255,255,255,.8);margin:2px 0}
+.inv-ftr-info strong{color:#fff;font-size:12px}
 
 /* bottom bar */
 .inv-botbar{height:6px;background:var(--accent)}
@@ -353,7 +363,7 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
       </div>
     </div>
 
-    {{-- Footer --}}
+    {{-- Footer notes --}}
     @if(!empty($settings['footer_title']) || !empty($settings['footer_notes']))
     <div class="inv-footer">
       @if(!empty($settings['footer_title']))<div class="inv-footer-title">{{ $settings['footer_title'] }}</div>@endif
@@ -364,6 +374,36 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
     @endif
 
   </div>
+
+  {{-- ── Branded footer bar (like money receipt) ── --}}
+  @php
+    $ftrCompany = $settings['company_name']      ?? '';
+    $ftrPhone   = $settings['company_telephone'] ?? '';
+    $ftrEmail   = $settings['mail_from_address'] ?? '';
+    $ftrAddr    = trim(implode(', ', array_filter([
+        $settings['company_address']  ?? '',
+        $settings['company_city']     ?? '',
+        $settings['company_state']    ?? '',
+        $settings['company_zipcode']  ?? '',
+        $settings['company_country']  ?? '',
+    ])));
+  @endphp
+  <div class="inv-ftr">
+    <table cellpadding="0" cellspacing="0">
+      <tr>
+        <td class="inv-ftr-logo">
+          <img src="{{ $img }}" alt="Logo">
+          @if($ftrAddr)<div class="inv-ftr-addr">{{ $ftrAddr }}</div>@endif
+        </td>
+        <td class="inv-ftr-info">
+          <p><strong>{{ $ftrCompany }}</strong></p>
+          @if($ftrPhone)<p>{{ $ftrPhone }}</p>@endif
+          @if($ftrEmail)<p>{{ $ftrEmail }}</p>@endif
+        </td>
+      </tr>
+    </table>
+  </div>
+
   <div class="inv-botbar"></div>
 </div>
 
