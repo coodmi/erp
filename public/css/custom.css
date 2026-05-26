@@ -3647,49 +3647,15 @@ body.minimenu .dash-sidebar .main-logo a.b-brand.ai-sidebar-brand .ai-sidebar-br
 
 
 /* ══════════════════════════════════════════════
-   Sidebar — no flash, smooth transitions
+   Sidebar — no flash on reload
    ══════════════════════════════════════════════ */
 
-/* 1. Sidebar always dark from first paint — no light-sidebar flash */
+/* Sidebar always dark from first paint */
 .dash-sidebar,
 .dash-sidebar.light-sidebar {
     background: #0f1629 !important;
-    transition: width .22s cubic-bezier(.4,0,.2,1),
-                transform .22s cubic-bezier(.4,0,.2,1) !important;
-    will-change: transform, width;
 }
 
-/* 2. Sidebar links — smooth hover/active transitions */
-.dash-sidebar .dash-navbar .dash-item > .dash-link {
-    transition: background .18s ease, color .18s ease, box-shadow .18s ease !important;
-}
-
-/* 3. Submenu — smooth open/close */
-.dash-sidebar .dash-submenu {
-    transition: max-height .25s cubic-bezier(.4,0,.2,1),
-                opacity .2s ease !important;
-    overflow: hidden;
-}
-
-/* 4. Loader — covers page until JS is ready, then fades out */
-.loader-bg {
-    background: #0f1629 !important;
-    transition: opacity .3s ease !important;
-}
-.loader-bg.fade-out {
-    opacity: 0;
-    pointer-events: none;
-}
-
-/* 5. Page content — fade in smoothly after load */
-.dash-container {
-    animation: pageIn .25s ease forwards;
-}
-@keyframes pageIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-/* 6. Prevent any white flash on html/body before CSS loads */
+/* Prevent white flash on html/body before CSS loads */
 html { background: #f1f5f9 !important; }
 body { background: #f1f5f9 !important; }

@@ -8,10 +8,9 @@ document.addEventListener("DOMContentLoaded", function () {
     setTimeout(function () {
         var loader = document.querySelector(".loader-bg");
         if (loader) {
-            loader.classList.add("fade-out");
-            setTimeout(function () { loader.remove(); }, 320);
+            loader.remove();
         }
-    }, 250);
+    }, 400);
     // remove pre-loader end
     if (!document.querySelector("body").classList.contains("dash-horizontal")) {
         addscroller();
