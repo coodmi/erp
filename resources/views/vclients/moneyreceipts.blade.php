@@ -57,7 +57,7 @@
 
         /* Header */
         .receipt-header { background:linear-gradient(135deg,#1e3a8a,#1d4ed8,#2563eb); padding:28px 36px; display:flex; align-items:center; justify-content:space-between; }
-        .receipt-header img { height:52px; width:auto; object-fit:contain; filter:brightness(0) invert(1); }
+        .receipt-header img { height:52px; width:auto; object-fit:contain; }
         .receipt-title { text-align:right; }
         .receipt-title h1 { color:#fff; font-size:2rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; margin:0; }
         .receipt-title p { color:rgba(255,255,255,.75); font-size:.82rem; margin-top:4px; }
@@ -113,7 +113,7 @@
 
         /* Footer */
         .receipt-footer { background:linear-gradient(135deg,#1e3a8a,#1d4ed8); padding:20px 36px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
-        .receipt-footer img { height:40px; width:auto; object-fit:contain; filter:brightness(0) invert(1); }
+        .receipt-footer img { height:40px; width:auto; object-fit:contain; }
         .receipt-footer-info { text-align:right; }
         .receipt-footer-info p { color:rgba(255,255,255,.85); font-size:.78rem; margin:2px 0; }
 

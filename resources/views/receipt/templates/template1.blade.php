@@ -32,7 +32,7 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#0f172a;font-size:1
 .rc-wrap{max-width:760px;margin:24px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 32px rgba(15,23,42,.13)}
 .rc-topbar{height:6px;background:{{ $accent }}}
 .rc-header{background:{{ $headerBg }};padding:28px 36px;display:flex;align-items:center;justify-content:space-between;gap:20px}
-.rc-logo{max-height:56px;max-width:200px;object-fit:contain;filter:brightness(0) invert(1)}
+.rc-logo{max-height:56px;max-width:200px;object-fit:contain}
 .rc-title{text-align:right}
 .rc-title h1{font-size:1.65rem;font-weight:900;letter-spacing:.08em;text-transform:uppercase;color:{{ $headerFg }};margin:0}
 .rc-title p{font-size:.8rem;color:rgba(255,255,255,.75);margin-top:4px}
@@ -74,7 +74,7 @@ body{font-family:'Inter',sans-serif;background:#f1f5f9;color:#0f172a;font-size:1
 .rc-sig-img{max-height:64px;max-width:100%;width:auto;margin:0 auto 8px;display:block;object-fit:contain}
 .rc-sig p{font-size:11px;color:#64748b;font-weight:600}
 .rc-footer{background:{{ $headerBg }};padding:18px 36px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
-.rc-footer img{height:36px;filter:brightness(0) invert(1)}
+.rc-footer img{height:36px}
 .rc-footer-info{text-align:right}
 .rc-footer-info p{color:rgba(255,255,255,.85);font-size:11px;margin:2px 0}
 .rc-botbar{height:6px;background:{{ $accent }}}

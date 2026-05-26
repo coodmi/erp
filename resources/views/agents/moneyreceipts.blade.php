@@ -55,7 +55,7 @@
         .btn-print:hover { filter:brightness(1.05); transform:translateY(-1px); }
         .receipt { background:#fff; border-radius:20px; box-shadow:0 20px 60px rgba(15,23,42,.12); overflow:hidden; }
         .receipt-header { background:linear-gradient(135deg,#1e3a8a,#1d4ed8,#2563eb); padding:28px 36px; display:flex; align-items:center; justify-content:space-between; }
-        .receipt-header img { height:52px; width:auto; object-fit:contain; filter:brightness(0) invert(1); }
+        .receipt-header img { height:52px; width:auto; object-fit:contain; }
         .receipt-title h1 { color:#fff; font-size:2rem; font-weight:900; letter-spacing:.08em; text-transform:uppercase; margin:0; text-align:right; }
         .receipt-title p { color:rgba(255,255,255,.75); font-size:.82rem; margin-top:4px; text-align:right; }
         .receipt-meta { background:#f8fafc; border-bottom:1px solid #e2e8f0; padding:14px 36px; display:flex; gap:32px; flex-wrap:wrap; }
@@ -86,7 +86,7 @@
         .sig-img { max-height:64px; max-width:100%; margin:0 auto 8px; display:block; object-fit:contain; }
         .sig-box p { font-size:.78rem; color:#64748b; font-weight:600; }
         .receipt-footer { background:linear-gradient(135deg,#1e3a8a,#1d4ed8); padding:20px 36px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; }
-        .receipt-footer img { height:40px; width:auto; object-fit:contain; filter:brightness(0) invert(1); }
+        .receipt-footer img { height:40px; width:auto; object-fit:contain; }
         .receipt-footer-info { text-align:right; }
         .receipt-footer-info p { color:rgba(255,255,255,.85); font-size:.78rem; margin:2px 0; }
         @media print {

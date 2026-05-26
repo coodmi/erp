@@ -63,7 +63,7 @@
 /* ── Receipt ── */
 .vp-receipt { background:#fff; border-radius:16px; box-shadow:0 20px 60px rgba(15,23,42,.1); overflow:hidden; max-width:860px; margin:0 auto; }
 .vp-receipt-header { background:linear-gradient(135deg,#1e3a8a,#1d4ed8,#2563eb); padding:24px 32px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
-.vp-receipt-header img { height:48px; width:auto; object-fit:contain; filter:brightness(0) invert(1); }
+.vp-receipt-header img { height:48px; width:auto; object-fit:contain; }
 .vp-receipt-title { text-align:right; }
 .vp-receipt-title h1 { color:#fff; font-size:1.7rem; font-weight:900; letter-spacing:.06em; text-transform:uppercase; margin:0; }
 .vp-receipt-title p { color:rgba(255,255,255,.7); font-size:.78rem; margin-top:3px; }
@@ -111,7 +111,7 @@
 
 /* Footer */
 .vp-receipt-footer { background:linear-gradient(135deg,#1e3a8a,#1d4ed8); padding:18px 32px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
-.vp-receipt-footer img { height:36px; width:auto; object-fit:contain; filter:brightness(0) invert(1); }
+.vp-receipt-footer img { height:36px; width:auto; object-fit:contain; }
 .vp-footer-info { text-align:right; }
 .vp-footer-info p { color:rgba(255,255,255,.8); font-size:.75rem; margin:2px 0; }
 
