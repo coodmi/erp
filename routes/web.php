@@ -596,8 +596,10 @@ Route::group(
     }
 );
 
-Route::get('/invoices/preview/{template}/{color}', [InvoiceController::class, 'previewInvoice'])->name('invoice.preview');
-Route::get('/receipts/preview/{color}', [InvoiceController::class, 'previewMoneyReceipt'])->name('receipt.preview');
+Route::middleware(['auth', 'XSS'])->group(function () {
+    Route::get('/invoices/preview/{template}/{color}', [InvoiceController::class, 'previewInvoice'])->name('invoice.preview');
+    Route::get('/receipts/preview/{color}', [InvoiceController::class, 'previewMoneyReceipt'])->name('receipt.preview');
+});
 Route::post('/invoices/template/setting', [InvoiceController::class, 'saveTemplateSettings'])->name('template.setting');
 
 Route::group(

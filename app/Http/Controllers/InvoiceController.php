@@ -24,6 +24,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 
@@ -981,12 +982,16 @@ class InvoiceController extends Controller
     public function previewInvoice(Request $request, $template, $color)
     {
         $objUser  = \Auth::user();
-        $settings = Utility::settings();
-        $invoice  = new Invoice();
+        if (!$objUser) {
+            abort(403);
+        }
+        $settings  = Utility::settings();
+        $invoice   = new Invoice();
+        $creatorId = $objUser->creatorId();
 
         $partyId   = $request->get('party_id');
         $partyType = $request->get('party_type', 'customer');
-        $customer  = $this->resolvePreviewParty($partyId, $partyType, $objUser);
+        $customer  = $this->resolvePreviewParty($partyId, $partyType, $creatorId);
 
         $previewTotals = $this->buildPreviewLineItems($partyId, $partyType);
         $items           = $previewTotals['items'];
@@ -1007,13 +1012,13 @@ class InvoiceController extends Controller
         $invoice->previewPaid       = $previewTotals['previewPaid'];
         $invoice->previewDue        = $previewTotals['previewDue'];
         $invoice->taxesData         = $taxesData;
-        $invoice->created_by     = $objUser->creatorId();
+        $invoice->created_by        = $creatorId;
 
         $invoice->customField   = [];
         $customFields           = [];
 
         $preview    = 1;
-        $color      = '#' . $color;
+        $color      = '#' . ltrim((string) $color, '#');
         $font_color = Utility::getFontColor($color);
 
 
@@ -1033,12 +1038,16 @@ class InvoiceController extends Controller
     public function previewMoneyReceipt(Request $request, $color)
     {
         $objUser  = \Auth::user();
-        $settings = Utility::settings();
-        $invoice  = new Invoice();
+        if (!$objUser) {
+            abort(403);
+        }
+        $settings  = Utility::settings();
+        $invoice   = new Invoice();
+        $creatorId = $objUser->creatorId();
 
         $partyId   = $request->get('party_id');
         $partyType = $request->get('party_type', 'customer');
-        $customer  = $this->resolvePreviewParty($partyId, $partyType, $objUser);
+        $customer  = $this->resolvePreviewParty($partyId, $partyType, $creatorId);
 
         $previewTotals = $this->buildPreviewLineItems($partyId, $partyType);
         $items         = $previewTotals['items'];
@@ -1052,10 +1061,10 @@ class InvoiceController extends Controller
         $invoice->previewPaid       = $previewTotals['previewPaid'];
         $invoice->previewDue        = $previewTotals['previewDue'];
         $invoice->previewRefund     = $previewTotals['previewRefund'];
-        $invoice->created_by        = $objUser->creatorId();
+        $invoice->created_by        = $creatorId;
 
         $preview     = 1;
-        $receiptNo   = 'RCP-' . strtoupper(substr(md5($partyId . $partyType . date('Ymd')), 0, 8));
+        $receiptNo   = 'RCP-' . strtoupper(substr(md5(($partyId ?? '') . $partyType . date('Ymd')), 0, 8));
         $partyLabel  = ucfirst($partyType === 'customer' ? 'client' : $partyType);
         $noticeText  = $settings['receipt_notice_text'] ?? __("Money receipts will not be considered valid without the MD's seal and signature.");
         $footerText  = $settings['receipt_footer_text'] ?? '';
@@ -1297,7 +1306,7 @@ class InvoiceController extends Controller
     /**
      * Resolve bill-to party for print preview.
      */
-    private function resolvePreviewParty($partyId, $partyType, $objUser): \stdClass
+    private function resolvePreviewParty($partyId, $partyType, $creatorId): \stdClass
     {
         $customer = new \stdClass();
 
@@ -1310,8 +1319,8 @@ class InvoiceController extends Controller
                     $customer->billing_phone    = $real->passport_no ?? ($real->unique_code ?? '');
                     $customer->billing_country  = '';
                     $customer->party_code       = $real->unique_code ?? '';
-                } else {
-                    $real = \App\Models\Customer::where('created_by', $objUser->creatorId())->find($partyId);
+                } elseif ($creatorId) {
+                    $real = \App\Models\Customer::where('created_by', $creatorId)->find($partyId);
                     if ($real) {
                         $customer->billing_name    = $real->billing_name ?? $real->name ?? '';
                         $customer->billing_address = $real->billing_address ?? '';
@@ -1338,7 +1347,10 @@ class InvoiceController extends Controller
                 if ($real) {
                     $customer->billing_name    = $real->agent_name ?? '';
                     $customer->billing_address = $real->address ?? '';
-                    $customer->billing_phone   = $real->passport_number ?? ($real->unique_code ?? '');
+                    $customer->billing_phone   = $real->unique_code ?? '';
+                    if (Schema::hasColumn('agents', 'passport_number')) {
+                        $customer->billing_phone = $real->passport_number ?? $customer->billing_phone;
+                    }
                     $customer->party_code      = $real->unique_code ?? '';
                 }
             }
@@ -1381,25 +1393,11 @@ class InvoiceController extends Controller
         $clientRows = collect();
 
         if ($partyId && $partyType === 'agent') {
-            $clientRows = DB::table('clients')
-                ->leftJoin('countries', 'clients.visa_country_id', '=', 'countries.id')
-                ->where('clients.agent_id', $partyId)
-                ->select('clients.*', 'countries.country_name')
-                ->orderBy('clients.client_name')
-                ->get();
+            $clientRows = $this->fetchPreviewClientRows(['clients.agent_id' => $partyId]);
         } elseif ($partyId && $partyType === 'customer') {
-            $clientRows = DB::table('clients')
-                ->leftJoin('countries', 'clients.visa_country_id', '=', 'countries.id')
-                ->where('clients.id', $partyId)
-                ->select('clients.*', 'countries.country_name')
-                ->get();
+            $clientRows = $this->fetchPreviewClientRows(['clients.id' => $partyId]);
         } elseif ($partyId && $partyType === 'vendor') {
-            $clientRows = DB::table('clients')
-                ->leftJoin('countries', 'clients.visa_country_id', '=', 'countries.id')
-                ->where('clients.vendor_id', $partyId)
-                ->select('clients.*', 'countries.country_name')
-                ->orderBy('clients.client_name')
-                ->get();
+            $clientRows = $this->fetchPreviewClientRows(['clients.vendor_id' => $partyId]);
         }
 
         foreach ($clientRows as $row) {
@@ -1451,6 +1449,32 @@ class InvoiceController extends Controller
             'previewDue'         => $previewDue,
             'previewRefund'      => $previewRefund,
         ];
+    }
+
+    /**
+     * Load clients for preview; joins countries when the table exists.
+     */
+    private function fetchPreviewClientRows(array $where)
+    {
+        try {
+            $query = DB::table('clients');
+            if (Schema::hasTable('countries')) {
+                $query->leftJoin('countries', 'clients.visa_country_id', '=', 'countries.id')
+                    ->select('clients.*', 'countries.country_name');
+            } else {
+                $query->select('clients.*', DB::raw("'' as country_name"));
+            }
+            foreach ($where as $col => $val) {
+                $query->where($col, $val);
+            }
+            return $query->orderBy('clients.client_name')->get();
+        } catch (\Throwable $e) {
+            $query = DB::table('clients')->select('clients.*', DB::raw("'' as country_name"));
+            foreach ($where as $col => $val) {
+                $query->where($col, $val);
+            }
+            return $query->orderBy('clients.client_name')->get();
+        }
     }
 
 

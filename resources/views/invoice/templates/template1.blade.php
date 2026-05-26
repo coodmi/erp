@@ -162,7 +162,14 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
       <div class="inv-head-left">
         <img class="inv-logo" src="{{ $img }}" alt="Logo">
         <div class="inv-qr-box {{ $isLight ? 'qr-normal' : 'qr-invert' }}">
-          {!! DNS2D::getBarcodeHTML(route('invoice.link.copy',\Crypt::encrypt($invoice->invoice_id)),"QRCODE",2,2) !!}
+          @php
+            try {
+                $qrHtml = DNS2D::getBarcodeHTML(route('invoice.link.copy',\Crypt::encrypt($invoice->invoice_id)), 'QRCODE', 2, 2);
+            } catch (\Throwable $e) {
+                $qrHtml = '';
+            }
+          @endphp
+          {!! $qrHtml !!}
         </div>
       </div>
 
