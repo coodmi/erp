@@ -30,14 +30,19 @@ function partyQuery() {
     return '&party_id=' + _psSelectedParty.id + '&party_type=' + apiType;
 }
 
+function previewColor(val, fallback) {
+    var c = (val || fallback || 'ffffff').toString().replace(/^#/, '');
+    return c.match(/^[0-9a-fA-F]{6}$/) ? c : (fallback || 'ffffff');
+}
+
 function refreshPreview() {
-    var color = $("input[name='invoice_color']:checked").val() || 'ffffff';
+    var color = previewColor($("input[name='invoice_color']:checked").val(), 'ffffff');
     var src   = '{{ url("/invoices/preview") }}/template1/' + color + '?t=' + Date.now() + partyQuery();
     document.getElementById('invoice_frame').src = src;
 }
 
 function refreshReceiptPreview() {
-    var color = $("input[name='receipt_header_color']:checked").val() || '1e3a8a';
+    var color = previewColor($("input[name='receipt_header_color']:checked").val(), '1e3a8a');
     var src   = '{{ url("/receipts/preview") }}/' + color + '?t=' + Date.now() + partyQuery();
     document.getElementById('receipt_frame').src = src;
 }

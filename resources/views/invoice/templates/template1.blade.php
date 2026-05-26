@@ -1,6 +1,9 @@
 @php
-    $settings_data = \App\Models\Utility::settingsById($invoice->created_by);
-    $hex = ltrim($color, '#');
+    $settings_data = \App\Models\Utility::settingsById($invoice->created_by ?? 1);
+    $hex = ltrim((string) ($color ?? '1e293b'), '#');
+    if (!preg_match('/^[0-9a-fA-F]{3}([0-9a-fA-F]{3})?$/', $hex)) {
+        $hex = '1e293b';
+    }
     if(strlen($hex) === 3) $hex = $hex[0].$hex[0].$hex[1].$hex[1].$hex[2].$hex[2];
     $r = hexdec(substr($hex,0,2));
     $g = hexdec(substr($hex,2,2));
@@ -15,7 +18,7 @@
     $headerFg = '#ffffff';
 @endphp
 <!DOCTYPE html>
-<html lang="en" dir="{{ $settings_data['SITE_RTL']=='on'?'rtl':'' }}">
+<html lang="en" dir="{{ ($settings_data['SITE_RTL'] ?? '') === 'on' ? 'rtl' : '' }}">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -146,7 +149,7 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
   .inv-wrap{box-shadow:none;margin:0;border-radius:0}
 }
 </style>
-@if($settings_data['SITE_RTL']=='on')
+@if(($settings_data['SITE_RTL'] ?? '') === 'on')
 <link rel="stylesheet" href="{{ asset('css/bootstrap-rtl.css') }}">
 @endif
 </head>
@@ -254,10 +257,13 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
         <tbody>
           @if(isset($invoice->itemData) && count($invoice->itemData)>0)
             @foreach($invoice->itemData as $item)
-              @php $unit=App\Models\ProductServiceUnit::find($item->unit); $itax=0; @endphp
+              @php
+                $itax = 0;
+                $unit = (!empty($preview) || empty($item->unit)) ? null : App\Models\ProductServiceUnit::find($item->unit);
+              @endphp
               <tr>
                 <td>{{ $item->name }}</td>
-                <td>{{ $item->quantity }}{{ $unit?' ('.$unit->name.')':'' }}</td>
+                <td>{{ $item->quantity }}{{ $unit ? ' ('.$unit->name.')' : '' }}</td>
                 <td>{{ Utility::priceFormat($settings,$item->price) }}</td>
                 <td>{{ $item->discount!=0?Utility::priceFormat($settings,$item->discount):'—' }}</td>
                 <td>
@@ -352,7 +358,9 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
     @if(!empty($settings['footer_title']) || !empty($settings['footer_notes']))
     <div class="inv-footer">
       @if(!empty($settings['footer_title']))<div class="inv-footer-title">{{ $settings['footer_title'] }}</div>@endif
-      @if(!empty($settings['footer_notes']))<div class="inv-footer-notes">{!! $settings['footer_notes'] !!}</div>@endif
+      @if(!empty($settings['footer_notes']))
+        <div class="inv-footer-notes">@if(!empty($preview)){{ strip_tags($settings['footer_notes']) }}@else{!! $settings['footer_notes'] !!}@endif</div>
+      @endif
     </div>
     @endif
 

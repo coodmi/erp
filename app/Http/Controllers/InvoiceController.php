@@ -985,7 +985,7 @@ class InvoiceController extends Controller
         if (!$objUser) {
             abort(403);
         }
-        $settings  = Utility::settings();
+        $settings  = $this->previewSettings();
         $invoice   = new Invoice();
         $creatorId = $objUser->creatorId();
 
@@ -1032,18 +1032,9 @@ class InvoiceController extends Controller
         else{
             $img          = asset($logo . '/' . (isset($company_logo) && !empty($company_logo) ? $company_logo : 'logo-dark.png'));
         }
-        try {
-            return view('invoice.templates.' . $template, compact('invoice', 'preview', 'color', 'img', 'settings', 'customer', 'font_color', 'customFields'));
-        } catch (\Throwable $e) {
-            report($e);
-            return response(
-                '<html><body style="font-family:sans-serif;padding:40px;text-align:center;color:#64748b;">'
-                . '<h2 style="color:#0f172a;">' . e(__('Preview unavailable')) . '</h2>'
-                . '<p>' . e($e->getMessage()) . '</p></body></html>',
-                200,
-                ['Content-Type' => 'text/html; charset=UTF-8']
-            );
-        }
+        return $this->renderPreviewHtml('invoice.templates.' . $template, compact(
+            'invoice', 'preview', 'color', 'img', 'settings', 'customer', 'font_color', 'customFields'
+        ));
     }
 
     public function previewMoneyReceipt(Request $request, $color)
@@ -1052,7 +1043,7 @@ class InvoiceController extends Controller
         if (!$objUser) {
             abort(403);
         }
-        $settings  = Utility::settings();
+        $settings  = $this->previewSettings();
         $invoice   = new Invoice();
         $creatorId = $objUser->creatorId();
 
@@ -1099,10 +1090,51 @@ class InvoiceController extends Controller
             $img = asset($logo . '/' . (!empty($company_logo) ? $company_logo : 'logo-dark.png'));
         }
 
-        return view('receipt.templates.template1', compact(
+        return $this->renderPreviewHtml('receipt.templates.template1', compact(
             'invoice', 'preview', 'color', 'img', 'settings', 'customer',
             'receiptNo', 'partyLabel', 'noticeText', 'footerText', 'displayName'
         ));
+    }
+
+    /**
+     * Settings merged with safe defaults for print preview.
+     */
+    private function previewSettings(): array
+    {
+        return array_merge([
+            'site_date_format'               => 'M j, Y',
+            'site_time_format'               => 'g:i A',
+            'invoice_prefix'                 => '#INVO',
+            'decimal_number'                 => 2,
+            'site_currency_symbol'           => '$',
+            'site_currency_symbol_position'  => 'pre',
+            'company_name'                   => '',
+        ], Utility::settings());
+    }
+
+    /**
+     * Render preview HTML and return a UTF-8 safe response (catches view render errors).
+     */
+    private function renderPreviewHtml(string $view, array $data)
+    {
+        try {
+            $html = view($view, $data)->render();
+            if (!mb_check_encoding($html, 'UTF-8')) {
+                $html = mb_convert_encoding($html, 'UTF-8', 'UTF-8');
+            }
+
+            return response($html, 200, ['Content-Type' => 'text/html; charset=UTF-8']);
+        } catch (\Throwable $e) {
+            report($e);
+
+            return response(
+                '<html><body style="font-family:sans-serif;padding:40px;text-align:center;color:#64748b;">'
+                . '<h2 style="color:#0f172a;">' . e(__('Preview unavailable')) . '</h2>'
+                . '<p>' . e($e->getMessage()) . '</p></body></html>',
+                200,
+                ['Content-Type' => 'text/html; charset=UTF-8']
+            );
+        }
     }
 
     public function invoice($invoice_id)
