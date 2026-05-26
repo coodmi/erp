@@ -917,9 +917,6 @@ function updatePartyDropdown() {
             <button type="button" class="ps-preview-btn print" onclick="psPrintPreview()" title="{{ __('Print') }}">
                 <i class="ti ti-printer"></i> {{ __('Print') }}
             </button>
-            <button type="button" class="ps-preview-btn pdf" onclick="psDownloadPdf()" title="{{ __('Save as PDF') }}">
-                <i class="ti ti-file-type-pdf"></i> {{ __('Save PDF') }}
-            </button>
         </div>
     </div>
     @php
@@ -940,9 +937,6 @@ function updatePartyDropdown() {
         <div class="ps-preview-actions">
             <button type="button" class="ps-preview-btn print" onclick="psPrintPreview()" title="{{ __('Print') }}">
                 <i class="ti ti-printer"></i> {{ __('Print') }}
-            </button>
-            <button type="button" class="ps-preview-btn pdf" onclick="psDownloadPdf()" title="{{ __('Save as PDF') }}">
-                <i class="ti ti-file-type-pdf"></i> {{ __('Save PDF') }}
             </button>
         </div>
     </div>
