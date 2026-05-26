@@ -390,24 +390,7 @@
                                         </small>
                                     </div>
                                 @endif
-                                @if(App\Models\Utility::getValByName('shipping_display')=='on')
-                                    <div class="col ">
-                                        <small>
-                                            <strong>{{__('Shipped To')}} :</strong><br>
-                                            @if(!empty($customer->shipping_name))
-                                                {{!empty($customer->shipping_name)?$customer->shipping_name:''}}<br>
-                                                {{!empty($customer->shipping_address)?$customer->shipping_address:''}}<br>
-                                                {{!empty($customer->shipping_city)?$customer->shipping_city:'' . ', '}}<br>
-                                                {{!empty($customer->shipping_state)?$customer->shipping_state:'' .', '}},
-                                                {{!empty($customer->shipping_zip)?$customer->shipping_zip:''}}<br>
-                                                {{!empty($customer->shipping_country)?$customer->shipping_country:''}}<br>
-                                                {{!empty($customer->shipping_phone)?$customer->shipping_phone:''}}<br>
-                                            @else
-                                                -
-                                            @endif
-                                        </small>
-                                    </div>
-                                @endif
+
                                 <div class="col">
                                     <div class="float-end mt-3">
                                         {!! DNS2D::getBarcodeHTML(route('invoice.link.copy',\Illuminate\Support\Facades\Crypt::encrypt($invoice->id)), "QRCODE",2,2) !!}

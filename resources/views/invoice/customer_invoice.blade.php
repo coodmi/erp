@@ -191,18 +191,7 @@
                                   </small>
                               </div>
                           @endif
-                          @if(\Utility::companyData($invoice->created_by,'shipping_display')=='on')
-                              <div class="col">
-                                  <small>
-                                      <strong>{{__('Shipped To')}} :</strong><br>
-                                      {{!empty($customer->shipping_name)?$customer->shipping_name:''}}<br>
-                                      {{!empty($customer->shipping_phone)?$customer->shipping_phone:''}}<br>
-                                      {{!empty($customer->shipping_address)?$customer->shipping_address:''}}<br>
-                                      {{!empty($customer->shipping_zip)?$customer->shipping_zip:''}}<br>
-                                      {{!empty($customer->shipping_city)?$customer->shipping_city:'' . ', '}} {{!empty($customer->shipping_state)?$customer->shipping_state:'' .', '}},{{!empty($customer->shipping_country)?$customer->shipping_country:''}}
-                                  </small>
-                              </div>
-                          @endif
+
                             <div class="col">
                                 <div class="float-end mt-3">
                                 {!! DNS2D::getBarcodeHTML(route('invoice.link.copy',\Illuminate\Support\Facades\Crypt::encrypt($invoice->id)), "QRCODE",2,2) !!}

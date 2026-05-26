@@ -209,22 +209,7 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
           </div>
         @else<div class="inv-addr-info">—</div>@endif
       </div>
-      @if($settings['shipping_display']=='on')
-      <div class="inv-addr-card">
-        <div class="inv-addr-tag">{{ __('Ship To') }}</div>
-        @if(!empty($customer->shipping_name))
-          <div class="inv-addr-name">{{ $customer->shipping_name }}</div>
-          <div class="inv-addr-info">
-            @if($customer->shipping_address){{ $customer->shipping_address }}<br>@endif
-            @if($customer->shipping_city){{ $customer->shipping_city }}@endif
-            @if($customer->shipping_state), {{ $customer->shipping_state }}@endif
-            @if($customer->shipping_zip) {{ $customer->shipping_zip }}@endif
-            @if($customer->shipping_country)<br>{{ $customer->shipping_country }}@endif
-            @if($customer->shipping_phone)<br>{{ $customer->shipping_phone }}@endif
-          </div>
-        @else<div class="inv-addr-info">—</div>@endif
-      </div>
-      @endif
+
     </div>
 
     {{-- Status --}}

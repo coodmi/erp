@@ -264,24 +264,7 @@
                         -
                     @endif
                 </td>
-                @if($settings['shipping_display']=='on')
-                    <td class="text-right">
-                        <strong style="margin-bottom: 10px; display:block;">{{__('Ship To')}}:</strong>
-                        @if(!empty($customer->shipping_name))
-                            <p>
-                                {{!empty($customer->shipping_name)?$customer->shipping_name:''}}<br>
-                                {{!empty($customer->shipping_address)?$customer->shipping_address:''}}<br>
-                                {{!empty($customer->shipping_city)?$customer->shipping_city:'' . ', '}}<br>
-                                {{!empty($customer->shipping_state)?$customer->shipping_state:'' .', '}},
-                                {{!empty($customer->shipping_zip)?$customer->shipping_zip:''}}<br>
-                                {{!empty($customer->shipping_country)?$customer->shipping_country:''}}<br>
-                                {{!empty($customer->shipping_phone)?$customer->shipping_phone:''}}<br>
-                            </p>
-                        @else
-                            -
-                        @endif
-                    </td>
-                @endif
+
             </tr>
             <tr>
                 
