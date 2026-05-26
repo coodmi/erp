@@ -543,23 +543,21 @@ function onPartySelect(id) {
     // update preview iframe with party data
     refreshPreview();
 
-    // if client or vendor — also load address for the info card
-    if (type === 'client' || type === 'vendor') {
-        var apiType = type === 'client' ? 'customer' : 'vendor';
-        fetch('{{ route("print.recipient.data") }}?type=' + apiType + '&id=' + id, {
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            var addr = [];
-            if (data.billing_address) addr.push(data.billing_address);
-            if (data.billing_city)    addr.push(data.billing_city);
-            if (data.billing_country) addr.push(data.billing_country);
-            document.getElementById('ps_party_addr').textContent = addr.join(', ') || '{{ __("No address on file") }}';
-        }).catch(function() {});
-    } else if (type === 'agent') {
-        document.getElementById('ps_party_addr').textContent = item.email ? item.email : '';
-    }
+  // Load address / contact for the info card
+    var apiType = type === 'client' ? 'customer' : type;
+    fetch('{{ route("print.recipient.data") }}?type=' + apiType + '&id=' + id, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        var addr = [];
+        if (data.billing_address) addr.push(data.billing_address);
+        if (data.billing_city)    addr.push(data.billing_city);
+        if (data.billing_country) addr.push(data.billing_country);
+        if (!addr.length && data.contact) addr.push(data.contact);
+        if (!addr.length && data.email)   addr.push(data.email);
+        document.getElementById('ps_party_addr').textContent = addr.join(', ') || '{{ __("No address on file") }}';
+    }).catch(function() {});
 }
 
 function updatePartyDropdown() {

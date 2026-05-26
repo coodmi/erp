@@ -1027,7 +1027,57 @@ class SystemController extends Controller
         $type = $request->get('type', 'customer'); // 'customer' or 'vendor'
         $id   = $request->get('id');
 
-        if($type === 'customer') {
+        if ($type === 'agent') {
+            $agent = \App\Models\Agent::find($id);
+            if ($agent) {
+                return response()->json([
+                    'id'               => $agent->id,
+                    'name'             => $agent->agent_name ?? '',
+                    'email'            => $agent->unique_code ?? '',
+                    'contact'          => $agent->passport_number ?? '',
+                    'billing_name'     => $agent->agent_name ?? '',
+                    'billing_phone'    => $agent->passport_number ?? ($agent->unique_code ?? ''),
+                    'billing_address'  => $agent->address ?? '',
+                    'billing_city'     => '',
+                    'billing_state'    => '',
+                    'billing_country'  => '',
+                    'billing_zip'      => '',
+                    'shipping_name'    => $agent->agent_name ?? '',
+                    'shipping_phone'   => $agent->passport_number ?? '',
+                    'shipping_address' => $agent->address ?? '',
+                    'shipping_city'    => '',
+                    'shipping_state'   => '',
+                    'shipping_country' => '',
+                    'shipping_zip'     => '',
+                ]);
+            }
+            return response()->json(['error' => 'Not found.'], 404);
+        }
+
+        if ($type === 'customer') {
+            $vclient = \App\Models\VClient::find($id);
+            if ($vclient) {
+                return response()->json([
+                    'id'               => $vclient->id,
+                    'name'             => $vclient->client_name ?? '',
+                    'email'            => $vclient->passport_no ?? '',
+                    'contact'          => $vclient->unique_code ?? '',
+                    'billing_name'     => $vclient->client_name ?? '',
+                    'billing_phone'    => $vclient->passport_no ?? ($vclient->unique_code ?? ''),
+                    'billing_address'  => $vclient->address ?? '',
+                    'billing_city'     => '',
+                    'billing_state'    => '',
+                    'billing_country'  => '',
+                    'billing_zip'      => '',
+                    'shipping_name'    => $vclient->client_name ?? '',
+                    'shipping_phone'   => $vclient->passport_no ?? '',
+                    'shipping_address' => $vclient->address ?? '',
+                    'shipping_city'    => '',
+                    'shipping_state'   => '',
+                    'shipping_country' => '',
+                    'shipping_zip'     => '',
+                ]);
+            }
             $record = \App\Models\Customer::where('created_by', \Auth::user()->creatorId())->find($id);
         } else {
             $record = \App\Models\Vender::where('created_by', \Auth::user()->creatorId())->find($id);
@@ -1039,10 +1089,10 @@ class SystemController extends Controller
 
         return response()->json([
             'id'               => $record->id,
-            'name'             => $record->name,
+            'name'             => $record->name ?? ($record->client_name ?? ''),
             'email'            => $record->email ?? '',
             'contact'          => $record->contact ?? '',
-            'billing_name'     => $record->billing_name ?? '',
+            'billing_name'     => $record->billing_name ?? ($record->name ?? ''),
             'billing_phone'    => $record->billing_phone ?? '',
             'billing_address'  => $record->billing_address ?? '',
             'billing_city'     => $record->billing_city ?? '',

@@ -262,27 +262,61 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
                 <tr class="desc-row"><td colspan="6">{{ $item->description }}</td></tr>
               @endif
             @endforeach
+          @elseif(!empty($preview))
+            <tr>
+              <td colspan="6" style="text-align:center;padding:28px 14px;color:var(--t3);font-size:12.5px;">
+                {{ __('No services found for this party. Add clients under this agent to see line items here.') }}
+              </td>
+            </tr>
           @endif
         </tbody>
         <tfoot>
+          @php
+            if (!empty($preview)) {
+              $footSubTotal = $invoice->previewSubTotal ?? $invoice->totalRate ?? 0;
+              $footAmount   = $invoice->previewGrandTotal ?? 0;
+              $footDiscount = $invoice->totalDiscount ?? 0;
+            } else {
+              $footSubTotal = $invoice->getSubTotal();
+              $footAmount   = $invoice->getSubTotal();
+              $footDiscount = $invoice->getTotalDiscount();
+            }
+          @endphp
           <tr>
             <td>{{ __('Totals') }}</td>
             <td>{{ $invoice->totalQuantity }}</td>
             <td>{{ Utility::priceFormat($settings,$invoice->totalRate) }}</td>
-            <td>{{ Utility::priceFormat($settings,$invoice->totalDiscount) }}</td>
+            <td>{{ Utility::priceFormat($settings,$footDiscount) }}</td>
             <td>{{ Utility::priceFormat($settings,$invoice->totalTaxPrice) }}</td>
-            <td>{{ Utility::priceFormat($settings,$invoice->getSubTotal()) }}</td>
+            <td>{{ Utility::priceFormat($settings,$footAmount) }}</td>
           </tr>
         </tfoot>
       </table>
     </div>
 
     {{-- Totals --}}
+    @php
+      if (!empty($preview)) {
+        $sumSubTotal  = $invoice->previewSubTotal ?? 0;
+        $sumDiscount  = $invoice->totalDiscount ?? 0;
+        $sumGrand     = $invoice->previewGrandTotal ?? 0;
+        $sumPaid      = $invoice->previewPaid ?? 0;
+        $sumDue       = $invoice->previewDue ?? max(0, $sumGrand - $sumPaid);
+        $sumCredit    = 0;
+      } else {
+        $sumSubTotal  = $invoice->getSubTotal();
+        $sumDiscount  = $invoice->getTotalDiscount();
+        $sumGrand     = $invoice->getSubTotal() - $invoice->getTotalDiscount() + $invoice->getTotalTax();
+        $sumPaid      = ($invoice->getTotal() - $invoice->getDue()) - $invoice->invoiceTotalCreditNote();
+        $sumDue       = $invoice->getDue();
+        $sumCredit    = $invoice->invoiceTotalCreditNote();
+      }
+    @endphp
     <div class="inv-totals-wrap">
       <div class="inv-totals">
-        <div class="inv-tot-row"><span>{{ __('Subtotal') }}</span><span>{{ Utility::priceFormat($settings,$invoice->getSubTotal()) }}</span></div>
-        @if($invoice->getTotalDiscount())
-        <div class="inv-tot-row"><span>{{ __('Discount') }}</span><span>– {{ Utility::priceFormat($settings,$invoice->getTotalDiscount()) }}</span></div>
+        <div class="inv-tot-row"><span>{{ __('Subtotal') }}</span><span>{{ Utility::priceFormat($settings,$sumSubTotal) }}</span></div>
+        @if($sumDiscount)
+        <div class="inv-tot-row"><span>{{ __('Discount') }}</span><span>– {{ Utility::priceFormat($settings,$sumDiscount) }}</span></div>
         @endif
         @if(!empty($invoice->taxesData))
           @foreach($invoice->taxesData as $tn=>$tp)
@@ -291,13 +325,13 @@ html[dir="rtl"] .inv-totals{margin-left:0;margin-right:auto}
         @endif
         <div class="inv-tot-row grand">
           <span>{{ __('Total') }}</span>
-          <span>{{ Utility::priceFormat($settings,$invoice->getSubTotal()-$invoice->getTotalDiscount()+$invoice->getTotalTax()) }}</span>
+          <span>{{ Utility::priceFormat($settings,$sumGrand) }}</span>
         </div>
-        <div class="inv-tot-row"><span>{{ __('Paid') }}</span><span>{{ Utility::priceFormat($settings,($invoice->getTotal()-$invoice->getDue())-$invoice->invoiceTotalCreditNote()) }}</span></div>
-        @if($invoice->invoiceTotalCreditNote())
-        <div class="inv-tot-row"><span>{{ __('Credit Note') }}</span><span>{{ Utility::priceFormat($settings,$invoice->invoiceTotalCreditNote()) }}</span></div>
+        <div class="inv-tot-row"><span>{{ __('Paid') }}</span><span>{{ Utility::priceFormat($settings,$sumPaid) }}</span></div>
+        @if($sumCredit)
+        <div class="inv-tot-row"><span>{{ __('Credit Note') }}</span><span>{{ Utility::priceFormat($settings,$sumCredit) }}</span></div>
         @endif
-        <div class="inv-tot-row due"><span>{{ __('Amount Due') }}</span><span>{{ Utility::priceFormat($settings,$invoice->getDue()) }}</span></div>
+        <div class="inv-tot-row due"><span>{{ __('Amount Due') }}</span><span>{{ Utility::priceFormat($settings,$sumDue) }}</span></div>
       </div>
     </div>
 

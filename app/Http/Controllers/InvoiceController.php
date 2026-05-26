@@ -995,19 +995,37 @@ class InvoiceController extends Controller
                 $real = \App\Models\VClient::find($partyId);
                 if ($real) {
                     $customer->billing_name    = $real->client_name ?? '';
-                    $customer->billing_address = '';
+                    $customer->billing_address = $real->address ?? '';
                     $customer->billing_city    = '';
                     $customer->billing_state   = '';
                     $customer->billing_country = '';
                     $customer->billing_zip     = '';
-                    $customer->billing_phone   = '';
+                    $customer->billing_phone   = $real->passport_no ?? ($real->unique_code ?? '');
                     $customer->shipping_name    = $real->client_name ?? '';
-                    $customer->shipping_address = '';
+                    $customer->shipping_address = $real->address ?? '';
                     $customer->shipping_city    = '';
                     $customer->shipping_state   = '';
                     $customer->shipping_country = '';
                     $customer->shipping_zip     = '';
-                    $customer->shipping_phone   = '';
+                    $customer->shipping_phone   = $real->passport_no ?? ($real->unique_code ?? '');
+                } else {
+                    $real = \App\Models\Customer::where('created_by', $objUser->creatorId())->find($partyId);
+                    if ($real) {
+                        $customer->billing_name     = $real->billing_name ?? $real->name ?? '';
+                        $customer->billing_address  = $real->billing_address ?? '';
+                        $customer->billing_city     = $real->billing_city ?? '';
+                        $customer->billing_state    = $real->billing_state ?? '';
+                        $customer->billing_country  = $real->billing_country ?? '';
+                        $customer->billing_zip      = $real->billing_zip ?? '';
+                        $customer->billing_phone    = $real->billing_phone ?? $real->contact ?? '';
+                        $customer->shipping_name    = $real->shipping_name ?? '';
+                        $customer->shipping_address = $real->shipping_address ?? '';
+                        $customer->shipping_city    = $real->shipping_city ?? '';
+                        $customer->shipping_state   = $real->shipping_state ?? '';
+                        $customer->shipping_country = $real->shipping_country ?? '';
+                        $customer->shipping_zip     = $real->shipping_zip ?? '';
+                        $customer->shipping_phone   = $real->shipping_phone ?? '';
+                    }
                 }
             } elseif ($partyType === 'vendor') {
                 $real = \App\Models\Vender::find($partyId);
@@ -1036,14 +1054,14 @@ class InvoiceController extends Controller
                     $customer->billing_state   = '';
                     $customer->billing_country = '';
                     $customer->billing_zip     = '';
-                    $customer->billing_phone   = '';
+                    $customer->billing_phone   = $real->passport_number ?? ($real->unique_code ?? '');
                     $customer->shipping_name    = $real->agent_name ?? '';
-                    $customer->shipping_address = '';
+                    $customer->shipping_address = $real->address ?? '';
                     $customer->shipping_city    = '';
                     $customer->shipping_state   = '';
                     $customer->shipping_country = '';
                     $customer->shipping_zip     = '';
-                    $customer->shipping_phone   = '';
+                    $customer->shipping_phone   = $real->passport_number ?? ($real->unique_code ?? '');
                 }
             }
         }
@@ -1067,47 +1085,9 @@ class InvoiceController extends Controller
             $customer->billing_address  = '<Address>';
         }
 
-        $totalTaxPrice = 0;
-        $taxesData     = [];
-
-        $items = [];
-        for($i = 1; $i <= 3; $i++)
-        {
-            $item           = new \stdClass();
-            $item->name     = 'Item ' . $i;
-            $item->quantity = 1;
-            $item->tax      = 5;
-            $item->discount = 50;
-            $item->price    = 100;
-            $item->unit     = 1;
-
-            $taxes = [
-                'Tax 1',
-                'Tax 2',
-            ];
-
-            $itemTaxes = [];
-            foreach($taxes as $k => $tax)
-            {
-                $taxPrice         = 10;
-                $totalTaxPrice    += $taxPrice;
-                $itemTax['name']  = 'Tax ' . $k;
-                $itemTax['rate']  = '10 %';
-                $itemTax['price'] = '$10';
-                $itemTax['tax_price'] = 10;
-                $itemTaxes[]      = $itemTax;
-                if(array_key_exists('Tax ' . $k, $taxesData))
-                {
-                    $taxesData['Tax ' . $k] = $taxesData['Tax 1'] + $taxPrice;
-                }
-                else
-                {
-                    $taxesData['Tax ' . $k] = $taxPrice;
-                }
-            }
-            $item->itemTax = $itemTaxes;
-            $items[]       = $item;
-        }
+        $previewTotals = $this->buildPreviewLineItems($partyId, $partyType);
+        $items           = $previewTotals['items'];
+        $taxesData       = $previewTotals['taxesData'];
 
         $invoice->invoice_id = 1;
         $invoice->issue_date = date('Y-m-d H:i:s');
@@ -1115,11 +1095,15 @@ class InvoiceController extends Controller
         $invoice->itemData   = $items;
         $invoice->status = 0;
 
-        $invoice->totalTaxPrice = 60;
-        $invoice->totalQuantity = 3;
-        $invoice->totalRate     = 300;
-        $invoice->totalDiscount = 10;
-        $invoice->taxesData     = $taxesData;
+        $invoice->totalTaxPrice     = $previewTotals['totalTaxPrice'];
+        $invoice->totalQuantity     = $previewTotals['totalQuantity'];
+        $invoice->totalRate         = $previewTotals['previewSubTotal'];
+        $invoice->totalDiscount     = $previewTotals['totalDiscount'];
+        $invoice->previewSubTotal   = $previewTotals['previewSubTotal'];
+        $invoice->previewGrandTotal = $previewTotals['previewGrandTotal'];
+        $invoice->previewPaid       = $previewTotals['previewPaid'];
+        $invoice->previewDue        = $previewTotals['previewDue'];
+        $invoice->taxesData         = $taxesData;
         $invoice->created_by     = $objUser->creatorId();
 
         $invoice->customField   = [];
@@ -1350,6 +1334,99 @@ class InvoiceController extends Controller
         $data = Excel::download(new InvoiceExport(), $name . '.xlsx'); ob_end_clean();
 
         return $data;
+    }
+
+    /**
+     * Build invoice preview line items from agent / client / vendor records.
+     */
+    private function buildPreviewLineItems($partyId, $partyType): array
+    {
+        $items           = [];
+        $taxesData       = [];
+        $totalTaxPrice   = 0;
+        $totalQuantity   = 0;
+        $totalDiscount   = 0;
+        $previewSubTotal = 0;
+        $previewGrandTotal = 0;
+        $previewPaid     = 0;
+        $previewDue      = 0;
+
+        $visaLabels = [
+            'WV' => __('Work Permit Visa'),
+            'SV' => __('Student Visa'),
+            'TV' => __('Tourist Visa'),
+            'BV' => __('Business Visa'),
+            'OV' => __('Others'),
+        ];
+
+        $clientRows = collect();
+
+        if ($partyId && $partyType === 'agent') {
+            $clientRows = DB::table('clients')
+                ->leftJoin('countries', 'clients.visa_country_id', '=', 'countries.id')
+                ->where('clients.agent_id', $partyId)
+                ->select('clients.*', 'countries.country_name')
+                ->orderBy('clients.client_name')
+                ->get();
+        } elseif ($partyId && $partyType === 'customer') {
+            $clientRows = DB::table('clients')
+                ->leftJoin('countries', 'clients.visa_country_id', '=', 'countries.id')
+                ->where('clients.id', $partyId)
+                ->select('clients.*', 'countries.country_name')
+                ->get();
+        } elseif ($partyId && $partyType === 'vendor') {
+            $clientRows = DB::table('clients')
+                ->leftJoin('countries', 'clients.visa_country_id', '=', 'countries.id')
+                ->where('clients.vendor_id', $partyId)
+                ->select('clients.*', 'countries.country_name')
+                ->orderBy('clients.client_name')
+                ->get();
+        }
+
+        foreach ($clientRows as $row) {
+            $visaLabel = $visaLabels[$row->visa_type ?? ''] ?? ($row->visa_type ?? __('Visa Service'));
+            $unitPrice = (float) ($row->unit_price ?? 0);
+            $paid      = (float) ($row->amount_paid ?? 0);
+            $due       = (float) ($row->amount_due ?? 0);
+            $refund    = (float) ($row->refund ?? 0);
+
+            $item              = new \stdClass();
+            $item->name        = $row->client_name ?? __('Client');
+            $item->quantity    = 1;
+            $item->price       = $unitPrice;
+            $item->discount    = $refund;
+            $item->tax         = '';
+            $item->unit        = null;
+            $item->itemTax     = [];
+            $item->description = trim(implode(' · ', array_filter([
+                $visaLabel,
+                $row->country_name ?? null,
+                !empty($row->passport_no) ? __('Passport') . ': ' . $row->passport_no : null,
+                !empty($row->unique_code) ? __('ID') . ': ' . $row->unique_code : null,
+            ])));
+
+            $lineAmount = $unitPrice - $refund;
+
+            $items[] = $item;
+            $totalQuantity++;
+            $previewSubTotal += $unitPrice;
+            $totalDiscount += $refund;
+            $previewGrandTotal += $lineAmount;
+            $previewPaid += $paid;
+            $previewDue += $due;
+        }
+
+        return [
+            'items'              => $items,
+            'taxesData'          => $taxesData,
+            'totalTaxPrice'      => $totalTaxPrice,
+            'totalQuantity'      => $totalQuantity,
+            'totalDiscount'      => $totalDiscount,
+            'previewSubTotal'    => $previewSubTotal,
+            'previewGrandTotal'  => $previewGrandTotal,
+            'previewPaid'        => $previewPaid,
+            'previewDue'         => $previewDue,
+        ];
     }
 
 
